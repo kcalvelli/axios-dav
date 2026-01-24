@@ -183,7 +183,7 @@ let
 
     [default]
     ${lib.optionalString (calCfg.defaultCalendar or null != null) ''
-      default_calendar = cal_${calCfg.defaultCalendar}
+      default_calendar = ${calCfg.defaultCalendar}
     ''}
     highlight_event_days = True
 
