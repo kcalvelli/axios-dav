@@ -165,11 +165,9 @@ in
     };
 
     mcp = {
-      enable =
-        lib.mkEnableOption "MCP server for AI calendar/contacts access"
-        // {
-          default = true;
-        };
+      enable = lib.mkEnableOption "MCP server for AI calendar/contacts access" // {
+        default = true;
+      };
     };
   };
 
@@ -178,9 +176,12 @@ in
     # Most config is in home-manager module
 
     # Ensure required packages are available
-    environment.systemPackages = with pkgs; [
-      vdirsyncer
-      khal
-    ] ++ lib.optionals cfg.contacts.enable [ khard ];
+    environment.systemPackages =
+      with pkgs;
+      [
+        vdirsyncer
+        khal
+      ]
+      ++ lib.optionals cfg.contacts.enable [ khard ];
   };
 }

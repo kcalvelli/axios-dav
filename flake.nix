@@ -44,7 +44,8 @@
 
       # Overlay for custom packages
       overlays.default = final: prev: {
-        mcp-dav = self.packages.${prev.system}.mcp-dav or (throw "mcp-dav not available for ${prev.system}");
+        mcp-dav =
+          self.packages.${prev.system}.mcp-dav or (throw "mcp-dav not available for ${prev.system}");
       };
 
       # Per-system outputs (packages, devShells)
