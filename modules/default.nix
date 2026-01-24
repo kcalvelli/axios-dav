@@ -80,6 +80,14 @@ in
                 default = false;
                 description = "If true, local changes are not synced back";
               };
+
+              # Custom paths (for backward compatibility with existing setups)
+              localPath = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Custom local storage path. Defaults to ~/.calendars/<account-name>/";
+                example = "~/.calendars/";
+              };
             };
           }
         );
