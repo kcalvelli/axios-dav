@@ -72,7 +72,7 @@
   - [x] `search_contacts` - filter by name/email
   - [x] `get_contact` - get single contact details
 - [x] Add MCP server to home-manager config
-- [ ] Test with mcp-cli / Claude Code (requires system rebuild)
+- [x] Test with mcp-cli / Claude Code (requires system rebuild)
 
 ## Phase 6: Documentation & Polish
 
