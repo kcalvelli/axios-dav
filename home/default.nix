@@ -283,56 +283,64 @@ in
       ))
     ];
 
-    # Systemd user service for vdirsyncer sync
-    systemd.user.services.vdirsyncer-sync = lib.mkIf calendarEnabled {
-      Unit = {
-        Description = "vdirsyncer: sync calendars and contacts";
-        After = [ "network-online.target" ];
-        Wants = [ "network-online.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.vdirsyncer}/bin/vdirsyncer sync";
-        StandardOutput = "journal";
-        StandardError = "journal";
-      };
-    };
+    # Systemd user service for vdirsyncer sync (mkForce to override axios's home/calendar module)
+    systemd.user.services.vdirsyncer-sync = lib.mkIf calendarEnabled (
+      lib.mkForce {
+        Unit = {
+          Description = "vdirsyncer: sync calendars and contacts";
+          After = [ "network-online.target" ];
+          Wants = [ "network-online.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.vdirsyncer}/bin/vdirsyncer sync";
+          StandardOutput = "journal";
+          StandardError = "journal";
+        };
+      }
+    );
 
-    # Timer for periodic sync
-    systemd.user.timers.vdirsyncer-sync = lib.mkIf calendarEnabled {
-      Unit.Description = "Run vdirsyncer sync periodically";
-      Timer = {
-        OnCalendar = frequencyToOnCalendar syncFrequency;
-        Persistent = true;
-        RandomizedDelaySec = "30s";
-      };
-      Install.WantedBy = [ "timers.target" ];
-    };
+    # Timer for periodic sync (mkForce to override axios's home/calendar module)
+    systemd.user.timers.vdirsyncer-sync = lib.mkIf calendarEnabled (
+      lib.mkForce {
+        Unit.Description = "Run vdirsyncer sync periodically";
+        Timer = {
+          OnCalendar = frequencyToOnCalendar syncFrequency;
+          Persistent = true;
+          RandomizedDelaySec = "30s";
+        };
+        Install.WantedBy = [ "timers.target" ];
+      }
+    );
 
     # Systemd service for metasync (metadata like colors, names)
-    systemd.user.services.vdirsyncer-metasync = lib.mkIf calendarEnabled {
-      Unit = {
-        Description = "vdirsyncer: metasync (names/colors)";
-        After = [ "network-online.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.vdirsyncer}/bin/vdirsyncer metasync";
-        StandardOutput = "journal";
-        StandardError = "journal";
-      };
-    };
+    systemd.user.services.vdirsyncer-metasync = lib.mkIf calendarEnabled (
+      lib.mkForce {
+        Unit = {
+          Description = "vdirsyncer: metasync (names/colors)";
+          After = [ "network-online.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.vdirsyncer}/bin/vdirsyncer metasync";
+          StandardOutput = "journal";
+          StandardError = "journal";
+        };
+      }
+    );
 
     # Timer for daily metasync
-    systemd.user.timers.vdirsyncer-metasync = lib.mkIf calendarEnabled {
-      Unit.Description = "Run vdirsyncer metasync daily";
-      Timer = {
-        OnCalendar = "daily";
-        Persistent = true;
-        RandomizedDelaySec = "5m";
-      };
-      Install.WantedBy = [ "timers.target" ];
-    };
+    systemd.user.timers.vdirsyncer-metasync = lib.mkIf calendarEnabled (
+      lib.mkForce {
+        Unit.Description = "Run vdirsyncer metasync daily";
+        Timer = {
+          OnCalendar = "daily";
+          Persistent = true;
+          RandomizedDelaySec = "5m";
+        };
+        Install.WantedBy = [ "timers.target" ];
+      }
+    );
 
     # Initial discovery service (runs once after first sync)
     systemd.user.services.vdirsyncer-discover = lib.mkIf calendarEnabled {
