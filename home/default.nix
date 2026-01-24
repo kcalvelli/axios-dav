@@ -6,6 +6,7 @@
   lib,
   pkgs,
   osConfig ? { },
+  inputs ? { },
   ...
 }:
 let
@@ -13,10 +14,23 @@ let
   pimCfg = osConfig.services.pim or config.services.pim or { };
   calCfg = pimCfg.calendar or { };
   contactsCfg = pimCfg.contacts or { };
+  mcpCfg = pimCfg.mcp or { };
 
   calendarEnabled = calCfg.enable or false;
   contactsEnabled = contactsCfg.enable or false;
+  mcpEnabled = (mcpCfg.enable or true) && (calendarEnabled || contactsEnabled);
   enabled = calendarEnabled || contactsEnabled;
+
+  # mcp-dav package - try overlay first, then inputs
+  mcp-dav =
+    pkgs.mcp-dav or (
+      if inputs ? axios-dav then
+        inputs.axios-dav.packages.${pkgs.stdenv.hostPlatform.system}.mcp-dav
+      else if inputs ? self then
+        inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.mcp-dav
+      else
+        throw "mcp-dav package not found. Add axios-dav overlay or ensure inputs.axios-dav is available."
+    );
 
   # Calendar accounts (from NixOS module)
   calendarAccounts = calCfg.accounts or { };
@@ -261,7 +275,8 @@ in
         vdirsyncer
         khal
       ]
-      ++ lib.optionals contactsEnabled [ khard ];
+      ++ lib.optionals contactsEnabled [ khard ]
+      ++ lib.optionals mcpEnabled [ mcp-dav ];
 
     # vdirsyncer configuration
     xdg.configFile."vdirsyncer/config" = lib.mkIf calendarEnabled { text = vdirsyncerConfig; };
@@ -371,6 +386,17 @@ in
     };
 
     # MCP server configuration
-    # TODO: Add mcp-dav to MCP config when services.pim.mcp.enable = true
+    # When enabled, install mcp-dav and make its command path available
+    # The actual MCP registration happens in the consuming config (e.g., axios)
+    # by reading this module's output and adding to their MCP server list
+    #
+    # Example MCP server registration (in axios home/ai/mcp.nix):
+    #   mcp-dav = {
+    #     command = "${pkgs.mcp-dav}/bin/mcp-dav";
+    #     env = {
+    #       MCP_DAV_CALENDARS = "~/.calendars";
+    #       MCP_DAV_CONTACTS = "~/.contacts";
+    #     };
+    #   };
   };
 }

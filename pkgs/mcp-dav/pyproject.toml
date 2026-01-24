@@ -6,20 +6,19 @@ build-backend = "setuptools.build_meta"
 name = "mcp-dav"
 version = "0.1.0"
 description = "MCP server for CalDAV/CardDAV calendar and contacts access"
-readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Keith Calvelli"}
 ]
 dependencies = [
-    # "mcp",  # MCP SDK - uncomment when implementing
-    "icalendar",  # For parsing .ics files
-    "vobject",    # For parsing .vcf files
+    "icalendar",
+    "vobject",
 ]
 
 [project.scripts]
 mcp-dav = "mcp_dav.server:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = ["mcp_dav"]
+package-dir = {"mcp_dav" = "src/mcp_dav"}

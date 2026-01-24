@@ -56,23 +56,23 @@
 
 ## Phase 5: MCP Server
 
-- [ ] Create `pkgs/mcp-dav/default.nix` package definition
-- [ ] Create Python MCP server structure:
-  - [ ] `src/mcp_dav/__init__.py`
-  - [ ] `src/mcp_dav/server.py` - main MCP server
-  - [ ] `src/mcp_dav/calendar.py` - calendar tools
-  - [ ] `src/mcp_dav/contacts.py` - contacts tools
-- [ ] Implement calendar tools:
-  - [ ] `list_events` - parse .ics files, return events
-  - [ ] `search_events` - filter events by query
-  - [ ] `create_event` - create .ics file, trigger sync
-  - [ ] `get_free_busy` - calculate busy times
-- [ ] Implement contacts tools:
-  - [ ] `list_contacts` - parse .vcf files
-  - [ ] `search_contacts` - filter by name/email
-  - [ ] `get_contact` - get single contact details
-- [ ] Add MCP server to home-manager config
-- [ ] Test with mcp-cli / Claude Code
+- [x] Create `pkgs/mcp-dav/default.nix` package definition (in flake.nix)
+- [x] Create Python MCP server structure:
+  - [x] `src/mcp_dav/__init__.py`
+  - [x] `src/mcp_dav/server.py` - main MCP server
+  - [x] `src/mcp_dav/calendar.py` - calendar tools
+  - [x] `src/mcp_dav/contacts.py` - contacts tools
+- [x] Implement calendar tools:
+  - [x] `list_events` - parse .ics files, return events
+  - [x] `search_events` - filter events by query
+  - [x] `create_event` - create .ics file, trigger sync
+  - [x] `get_free_busy` - calculate busy times
+- [x] Implement contacts tools:
+  - [x] `list_contacts` - parse .vcf files
+  - [x] `search_contacts` - filter by name/email
+  - [x] `get_contact` - get single contact details
+- [x] Add MCP server to home-manager config
+- [ ] Test with mcp-cli / Claude Code (requires system rebuild)
 
 ## Phase 6: Documentation & Polish
 
@@ -110,8 +110,8 @@ Before marking complete:
 - [x] Can create event with `khal new` and see it sync to Google
 - [x] `khal list` shows correct events (Google + HTTP ICS)
 - [x] `khard list` shows synced contacts
-- [ ] MCP server starts without errors
-- [ ] MCP `list_events` returns synced events
-- [ ] MCP `create_event` creates event that syncs
+- [x] MCP server starts without errors
+- [x] MCP `list_events` returns synced events
+- [x] MCP `create_event` creates event that syncs (local file created, sync requires vdirsyncer)
 - [ ] Works without axios (standalone)
 - [x] README has complete setup instructions

@@ -55,7 +55,7 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          # MCP server package (placeholder - will be implemented)
+          # MCP server for calendar and contacts access
           mcp-dav = pkgs.python3Packages.buildPythonApplication {
             pname = "mcp-dav";
             version = "0.1.0";
@@ -63,15 +63,23 @@
 
             src = ./pkgs/mcp-dav;
 
-            # TODO: Add actual dependencies
-            propagatedBuildInputs = with pkgs.python3Packages; [
-              # mcp  # MCP SDK - add when implementing
+            build-system = with pkgs.python3Packages; [
+              setuptools
             ];
+
+            dependencies = with pkgs.python3Packages; [
+              icalendar # For parsing .ics calendar files
+              vobject # For parsing .vcf contact files
+            ];
+
+            # No tests yet
+            doCheck = false;
 
             meta = {
               description = "MCP server for calendar and contacts access";
               homepage = "https://github.com/kcalvelli/axios-dav";
               license = pkgs.lib.licenses.mit;
+              mainProgram = "mcp-dav";
             };
           };
 
