@@ -162,16 +162,22 @@ let
   '';
 
   # Generate khal config
+  # HTTP/ICS subscriptions store files directly in directory (no subdirs)
+  # Google/CalDAV create subdirectories per calendar, requiring type=discover
   generateKhalCalendarEntry =
     name: account:
     let
+      isHttpSubscription = account.type == "http";
       khalPath =
-        if account.localPath or null != null then "${account.localPath}*" else "${calendarsPath}/${name}/*";
+        if account.localPath or null != null then
+          (if isHttpSubscription then account.localPath else "${account.localPath}*")
+        else
+          (if isHttpSubscription then "${calendarsPath}/${name}/" else "${calendarsPath}/${name}/*");
     in
     ''
       [[cal_${name}]]
       path = ${khalPath}
-      type = discover
+      ${lib.optionalString (!isHttpSubscription) "type = discover"}
       ${lib.optionalString (account.readOnly or false) "readonly = True"}
     '';
 
