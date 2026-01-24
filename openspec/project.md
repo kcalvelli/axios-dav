@@ -1,0 +1,121 @@
+# axios-dav Project
+
+## Vision
+
+Provide declarative, Nix-native CalDAV and CardDAV synchronization with AI-powered calendar and contacts management via MCP.
+
+## Goals
+
+1. **Declarative Configuration** - No manual config files; everything in Nix
+2. **Google Integration** - First-class support for Google Calendar and Contacts
+3. **AI-Powered Management** - MCP server for Claude Code / AI agents to manage calendar and contacts
+4. **Standalone Use** - Usable by any NixOS user, not just axios users
+5. **axios Integration** - Seamless integration as a flake input for axios
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | Nix (modules), Python (MCP server) |
+| Sync Engine | vdirsyncer |
+| Calendar CLI | khal |
+| Contacts CLI | khard |
+| MCP Framework | mcp Python SDK |
+| Secrets | agenix |
+| CI/CD | GitHub Actions |
+
+## Constitution (Non-Negotiable Rules)
+
+### 1. Declarative Only
+All configuration MUST be expressible in Nix. No manual file creation required by users.
+
+### 2. No Hardcoded Credentials
+OAuth tokens, API keys, and passwords MUST use file-based secrets (agenix paths). Never hardcode credentials.
+
+### 3. Modular Design
+Calendar and contacts MUST be independently enableable. Users should not be forced to use both.
+
+### 4. Provider Agnostic
+While Google is the primary target, the architecture MUST support other CalDAV/CardDAV providers (Fastmail, Nextcloud, etc.).
+
+### 5. Privacy First
+All sync and AI processing happens locally. No telemetry, no cloud dependencies beyond the calendar/contacts providers themselves.
+
+### 6. Spec-Driven Development
+All changes MUST follow the OpenSpec workflow:
+1. Create proposal in `openspec/changes/`
+2. Document specs before implementation
+3. Archive completed proposals
+
+### 7. Semantic Versioning
+Follow semver for releases. Breaking changes require major version bump.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     User's NixOS Configuration                   │
+│                                                                  │
+│  services.axios-dav = {                                         │
+│    calendar.enable = true;                                      │
+│    calendar.accounts.personal = { ... };                        │
+│    contacts.enable = true;                                      │
+│  };                                                              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     axios-dav NixOS Module                       │
+│                                                                  │
+│  • Generates ~/.config/vdirsyncer/config                        │
+│  • Generates ~/.config/khal/config                              │
+│  • Generates ~/.config/khard/config                             │
+│  • Sets up systemd timers for sync                              │
+│  • Configures MCP server                                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────────┐
+        │vdirsyncer│   │   khal   │   │   mcp-dav    │
+        │  (sync)  │   │  (CLI)   │   │ (AI access)  │
+        └──────────┘   └──────────┘   └──────────────┘
+              │
+              ▼
+        ┌──────────────────────────────────────┐
+        │  ~/.local/share/calendars/*.ics      │
+        │  ~/.local/share/contacts/*.vcf       │
+        └──────────────────────────────────────┘
+```
+
+## Integration Points
+
+### As Standalone Project
+```nix
+{
+  inputs.axios-dav.url = "github:kcalvelli/axios-dav";
+
+  # In configuration.nix or home.nix
+  imports = [ inputs.axios-dav.nixosModules.default ];
+
+  services.axios-dav.calendar.enable = true;
+}
+```
+
+### As Part of axios
+```nix
+# In axios flake.nix
+inputs.axios-dav.url = "github:kcalvelli/axios-dav";
+
+# axios wires up the integration, users just enable PIM features
+modules.pim = true;  # Enables axios-ai-mail + axios-dav
+```
+
+## Success Criteria
+
+1. User can sync Google Calendar with zero manual config file creation
+2. User can create calendar events via `khal new` and have them sync to Google
+3. AI agents can read/create/modify calendar events via MCP
+4. AI agents can search/read contacts via MCP
+5. Works standalone without axios
+6. Integrates cleanly into axios as a flake input
