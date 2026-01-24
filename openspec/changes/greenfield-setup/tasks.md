@@ -87,12 +87,12 @@
   - [x] Troubleshooting section
   - [x] Options reference tables
   - [x] MCP tools reference (placeholder)
-- [ ] Add CHANGELOG.md
+- [x] Add CHANGELOG.md
 - [x] Add LICENSE (MIT)
-- [ ] Create GitHub Actions workflow:
-  - [ ] `nix flake check`
-  - [ ] Formatting check
-- [ ] Create initial git tag/release
+- [x] Create GitHub Actions workflow:
+  - [x] `nix flake check`
+  - [x] Formatting check
+- [x] Create initial git tag/release
 
 ## axios Integration
 
@@ -113,5 +113,5 @@ Before marking complete:
 - [x] MCP server starts without errors
 - [x] MCP `list_events` returns synced events
 - [x] MCP `create_event` creates event that syncs (local file created, sync requires vdirsyncer)
-- [ ] Works without axios (standalone)
+- [x] Works without axios (standalone) - `nix flake check` passes
 - [x] README has complete setup instructions
