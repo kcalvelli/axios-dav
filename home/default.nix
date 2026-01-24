@@ -190,9 +190,9 @@ let
     [locale]
     timeformat = %H:%M
     dateformat = %Y-%m-%d
-    longdateformat = %A, %B %d, %Y
+    longdateformat = "%A, %B %d, %Y"
     datetimeformat = %Y-%m-%d %H:%M
-    longdatetimeformat = %A, %B %d, %Y %H:%M
+    longdatetimeformat = "%A, %B %d, %Y %H:%M"
 
     [view]
     agenda_event_format = {calendar-color}{cancelled}{start-end-time-style} {title}{repeat-symbol}{reset}
