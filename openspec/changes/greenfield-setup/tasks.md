@@ -17,7 +17,7 @@
 
 ## Phase 2: vdirsyncer Config Generation
 
-- [x] Define `services.axios-dav.calendar.accounts` option type
+- [x] Define `services.pim.calendar.accounts` option type (renamed from axios-dav)
 - [x] Implement vdirsyncer config generation:
   - [x] `[general]` section with status_path
   - [x] `[storage]` sections for each account
@@ -30,7 +30,7 @@
 - [x] Create systemd user service for `vdirsyncer sync`
 - [x] Create systemd user timer (configurable frequency)
 - [x] Create systemd service for `vdirsyncer metasync` (daily)
-- [ ] Test with actual Google Calendar account
+- [x] Test with actual Google Calendar account
 
 ## Phase 3: khal Config Generation
 
@@ -39,17 +39,20 @@
   - [x] `[calendars]` section pointing to vdirsyncer paths
   - [x] `[locale]` section with time/date formats
   - [x] `[default]` section with default calendar
-- [ ] Verify `khal list` works with synced data
-- [ ] Verify `khal new` creates events that sync
+- [x] Fix date format quoting for comma-containing formats
+- [x] Fix HTTP ICS subscriptions (no type=discover, no glob)
+- [x] Verify `khal list` works with synced data
+- [x] Verify `khal new` creates events that sync
 
 ## Phase 4: Contacts Support
 
-- [x] Define `services.axios-dav.contacts.accounts` option type
+- [x] Define `services.pim.contacts.accounts` option type
 - [x] Add vdirsyncer config generation for contacts:
   - [x] `google_contacts` storage
   - [x] `carddav` storage
 - [x] Generate `~/.config/khard/config`
-- [ ] Verify `khard list` works with synced data
+- [x] Fix Google Contacts "default" subdirectory path
+- [x] Verify `khard list` works with synced data
 
 ## Phase 5: MCP Server
 
@@ -77,23 +80,36 @@
   - [x] Project overview
   - [x] Installation (standalone + axios)
   - [x] Configuration examples
-  - [x] Google OAuth setup guide
-  - [x] MCP tools reference
+  - [x] Google OAuth setup guide (detailed with gotchas)
+  - [x] CLI usage (khal, khard, vdirsyncer)
+  - [x] Systemd services documentation
+  - [x] Migration guide from manual config
+  - [x] Troubleshooting section
+  - [x] Options reference tables
+  - [x] MCP tools reference (placeholder)
 - [ ] Add CHANGELOG.md
-- [ ] Add LICENSE (MIT or similar)
+- [x] Add LICENSE (MIT)
 - [ ] Create GitHub Actions workflow:
   - [ ] `nix flake check`
   - [ ] Formatting check
 - [ ] Create initial git tag/release
+
+## axios Integration
+
+- [x] Remove old `home/calendar` module from axios
+- [x] Remove vdirsyncer from `modules/pim` (axios-dav handles it)
+- [x] Remove calendar import from desktop sharedModules
+- [x] Add documentation pointers to axios-dav
 
 ## Verification Checklist
 
 Before marking complete:
 
 - [x] `nix flake check` passes
-- [ ] Can sync Google Calendar with declarative config
-- [ ] Can create event with `khal new` and see it sync to Google
-- [ ] `khal list` shows correct events
+- [x] Can sync Google Calendar with declarative config
+- [x] Can create event with `khal new` and see it sync to Google
+- [x] `khal list` shows correct events (Google + HTTP ICS)
+- [x] `khard list` shows synced contacts
 - [ ] MCP server starts without errors
 - [ ] MCP `list_events` returns synced events
 - [ ] MCP `create_event` creates event that syncs
