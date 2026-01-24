@@ -205,11 +205,19 @@ let
   '';
 
   # Generate khard config
+  # Google/CardDAV create subdirectories per collection (e.g., "default/")
+  # khard needs path to the actual vcf files directory
   generateKhardAddressbookEntry =
     name: account:
     let
-      khardPath =
+      # Google Contacts uses "default" as collection name
+      # CardDAV may have multiple collections - use wildcard
+      basePath =
         if account.localPath or null != null then account.localPath else "${contactsPath}/${name}/";
+      # For Google, point to default/ subdirectory; for CardDAV, use glob
+      khardPath =
+        if account.type == "google" then "${basePath}default/"
+        else "${basePath}";
     in
     ''
       [[contacts_${name}]]
