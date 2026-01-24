@@ -1,5 +1,5 @@
 # axios-dav NixOS module
-# Provides declarative CalDAV/CardDAV synchronization
+# Provides declarative CalDAV/CardDAV synchronization under services.pim
 {
   config,
   lib,
@@ -7,12 +7,13 @@
   ...
 }:
 let
-  cfg = config.services.axios-dav;
+  cfg = config.services.pim;
+  calCfg = cfg.calendar or { };
+  contactsCfg = cfg.contacts or { };
 in
 {
-  options.services.axios-dav = {
-    enable = lib.mkEnableOption "axios-dav calendar and contacts sync";
-
+  options.services.pim = {
+    # Calendar options
     calendar = {
       enable = lib.mkEnableOption "Calendar sync via CalDAV";
 
@@ -31,9 +32,9 @@ in
 
               # Google OAuth
               tokenFile = lib.mkOption {
-                type = lib.types.nullOr lib.types.path;
+                type = lib.types.nullOr lib.types.str;
                 default = null;
-                description = "Path to OAuth token file (agenix secret)";
+                description = "Path to OAuth token file (must be writable for token refresh)";
               };
 
               clientId = lib.mkOption {
@@ -100,8 +101,26 @@ in
         default = null;
         description = "Default calendar for new events (khal)";
       };
+
+      sync = {
+        frequency = lib.mkOption {
+          type = lib.types.str;
+          default = "5m";
+          description = "Sync frequency (systemd timer format)";
+        };
+
+        conflictResolution = lib.mkOption {
+          type = lib.types.enum [
+            "remote"
+            "local"
+          ];
+          default = "remote";
+          description = "Which side wins on sync conflict";
+        };
+      };
     };
 
+    # Contacts options
     contacts = {
       enable = lib.mkEnableOption "Contacts sync via CardDAV";
 
@@ -118,7 +137,7 @@ in
               };
 
               tokenFile = lib.mkOption {
-                type = lib.types.nullOr lib.types.path;
+                type = lib.types.nullOr lib.types.str;
                 default = null;
                 description = "Path to OAuth token file";
               };
@@ -147,6 +166,12 @@ in
                 type = lib.types.nullOr lib.types.path;
                 default = null;
               };
+
+              localPath = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Custom local storage path. Defaults to ~/.contacts/<account-name>/";
+              };
             };
           }
         );
@@ -155,23 +180,7 @@ in
       };
     };
 
-    sync = {
-      frequency = lib.mkOption {
-        type = lib.types.str;
-        default = "5m";
-        description = "Sync frequency (systemd timer format)";
-      };
-
-      conflictResolution = lib.mkOption {
-        type = lib.types.enum [
-          "remote"
-          "local"
-        ];
-        default = "remote";
-        description = "Which side wins on sync conflict";
-      };
-    };
-
+    # MCP server option
     mcp = {
       enable = lib.mkEnableOption "MCP server for AI calendar/contacts access" // {
         default = true;
@@ -179,17 +188,17 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (calCfg.enable or false || contactsCfg.enable or false) {
     # System-level configuration
     # Most config is in home-manager module
 
     # Ensure required packages are available
     environment.systemPackages =
       with pkgs;
-      [
+      lib.optionals (calCfg.enable or false) [
         vdirsyncer
         khal
       ]
-      ++ lib.optionals cfg.contacts.enable [ khard ];
+      ++ lib.optionals (contactsCfg.enable or false) [ khard ];
   };
 }
