@@ -444,20 +444,174 @@ rm ~/.vdirsyncer/google_token.json
 vdirsyncer discover
 ```
 
-## MCP Server (Coming Soon)
+## MCP Server
 
-When `services.pim.mcp.enable = true` (default), the mcp-dav server provides these tools for AI agents:
+The mcp-dav MCP server provides AI agents with direct access to your synced calendar and contacts data. When `services.pim.mcp.enable = true` (default), the `mcp-dav` binary is installed.
 
-### Calendar Tools
-- `list_events` - List events in date range
-- `search_events` - Search events by text
-- `create_event` - Create new calendar event
-- `get_free_busy` - Check availability
+### Available Tools
 
-### Contacts Tools
-- `list_contacts` - List all contacts
-- `search_contacts` - Search by name/email
-- `get_contact` - Get contact details
+#### Calendar Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_events` | List events in date range (default: today to +30 days) |
+| `search_events` | Search events by text in summary/description/location |
+| `create_event` | Create new calendar event (run `vdirsyncer sync` after to push to remote) |
+| `get_free_busy` | Get busy time slots for scheduling |
+
+#### Contacts Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_contacts` | List all contacts from address book |
+| `search_contacts` | Search contacts by name, email, phone, or organization |
+| `get_contact` | Get detailed contact info by UID or name |
+
+### Registering with Claude Code
+
+Add mcp-dav to your Claude Code MCP configuration (`~/.mcp.json` or `~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "mcp-dav": {
+      "command": "mcp-dav",
+      "env": {
+        "MCP_DAV_CALENDARS": "~/.calendars",
+        "MCP_DAV_CONTACTS": "~/.contacts"
+      }
+    }
+  }
+}
+```
+
+Or use the full path from Nix store:
+```bash
+# Find the path
+which mcp-dav
+# Output: /nix/store/...-mcp-dav-0.1.0/bin/mcp-dav
+```
+
+### Testing with mcp-cli
+
+```bash
+# List available tools
+mcp-cli mcp-dav -d
+
+# List events for next week
+mcp-cli call mcp-dav list_events '{"start_date": "2025-01-24", "end_date": "2025-01-31"}'
+
+# Search contacts
+mcp-cli call mcp-dav search_contacts '{"query": "John"}'
+
+# Create an event
+mcp-cli call mcp-dav create_event '{
+  "summary": "Team Meeting",
+  "start": "2025-01-25T10:00:00",
+  "end": "2025-01-25T11:00:00",
+  "calendar": "Family",
+  "location": "Conference Room"
+}'
+# Then sync: vdirsyncer sync
+
+# Check availability
+mcp-cli call mcp-dav get_free_busy '{"start_date": "2025-01-24", "end_date": "2025-01-26"}'
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_DAV_CALENDARS` | `~/.calendars` | Path to vdirsyncer calendar storage |
+| `MCP_DAV_CONTACTS` | `~/.contacts` | Path to vdirsyncer contacts storage |
+
+### Tool Schemas
+
+<details>
+<summary>list_events</summary>
+
+```json
+{
+  "start_date": "2025-01-24",  // Optional, defaults to today
+  "end_date": "2025-01-31",    // Optional, defaults to +30 days
+  "calendar": "Family"          // Optional, filter by calendar name
+}
+```
+</details>
+
+<details>
+<summary>search_events</summary>
+
+```json
+{
+  "query": "meeting",      // Required, case-insensitive search
+  "calendar": "Work",      // Optional, filter by calendar
+  "limit": 50              // Optional, max results (default: 50)
+}
+```
+</details>
+
+<details>
+<summary>create_event</summary>
+
+```json
+{
+  "summary": "Event Title",           // Required
+  "start": "2025-01-25T10:00:00",    // Required, ISO8601
+  "end": "2025-01-25T11:00:00",      // Required, ISO8601
+  "calendar": "Family",              // Required, calendar name
+  "location": "123 Main St",         // Optional
+  "description": "Event details",    // Optional
+  "all_day": false                   // Optional, default false
+}
+```
+</details>
+
+<details>
+<summary>get_free_busy</summary>
+
+```json
+{
+  "start_date": "2025-01-24",       // Required
+  "end_date": "2025-01-26",         // Required
+  "calendars": ["Work", "Family"]   // Optional, filter calendars
+}
+```
+</details>
+
+<details>
+<summary>list_contacts</summary>
+
+```json
+{
+  "addressbook": "google",  // Optional, filter by addressbook
+  "limit": 100              // Optional, max results (default: 100)
+}
+```
+</details>
+
+<details>
+<summary>search_contacts</summary>
+
+```json
+{
+  "query": "john",           // Required, searches name/email/phone/org
+  "addressbook": "google",   // Optional
+  "limit": 50                // Optional, default: 50
+}
+```
+</details>
+
+<details>
+<summary>get_contact</summary>
+
+```json
+{
+  "uid": "abc123",    // Optional, exact UID match
+  "name": "John"      // Optional, partial name match
+}
+```
+</details>
 
 ## Options Reference
 
