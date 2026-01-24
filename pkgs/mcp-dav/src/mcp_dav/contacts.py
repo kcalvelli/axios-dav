@@ -1,9 +1,11 @@
 """Contacts tools for MCP server - parse and manage .vcf files"""
 
 import os
+import shutil
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 import vobject
 
@@ -293,3 +295,359 @@ class ContactsManager:
                         return contact
 
         return None
+
+    def _backup_vcf(self, file_path: Path) -> str:
+        """
+        Create a backup of a VCF file before modification.
+
+        Args:
+            file_path: Path to the VCF file
+
+        Returns:
+            Path to the backup file
+        """
+        backup_path = Path(str(file_path) + ".bak")
+        shutil.copy2(file_path, backup_path)
+        return str(backup_path)
+
+    def _find_addressbook_dir(self, addressbook: str) -> Optional[Path]:
+        """
+        Find addressbook directory by name.
+
+        Args:
+            addressbook: Addressbook name
+
+        Returns:
+            Path to addressbook directory, or None if not found
+        """
+        if not self.contacts_path.exists():
+            return None
+
+        # Try exact match first
+        addr_dir = self.contacts_path / addressbook
+        if addr_dir.exists() and addr_dir.is_dir():
+            return addr_dir
+
+        # Try case-insensitive match
+        for subdir in self.contacts_path.iterdir():
+            if subdir.is_dir() and addressbook.lower() == subdir.name.lower():
+                return subdir
+
+        return None
+
+    def create_contact(
+        self,
+        formatted_name: str,
+        addressbook: str,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        emails: Optional[List[str]] = None,
+        phones: Optional[List[Dict[str, str]]] = None,
+        organization: Optional[str] = None,
+        title: Optional[str] = None,
+        notes: Optional[str] = None,
+        addresses: Optional[List[Dict[str, str]]] = None,
+    ) -> Contact:
+        """
+        Create a new contact.
+
+        Args:
+            formatted_name: Full display name (required)
+            addressbook: Addressbook name to create contact in (required)
+            first_name: First/given name
+            last_name: Last/family name
+            emails: List of email addresses
+            phones: List of phone dicts with 'type' and 'number'
+            organization: Company/organization name
+            title: Job title
+            notes: Notes/comments
+            addresses: List of address dicts
+
+        Returns:
+            Created Contact object
+
+        Raises:
+            ValueError: If addressbook not found
+        """
+        # Find addressbook directory
+        addr_dir = self._find_addressbook_dir(addressbook)
+        if not addr_dir:
+            raise ValueError(f"Addressbook not found: {addressbook}")
+
+        # Generate UID
+        contact_uid = str(uuid.uuid4())
+
+        # Create vCard
+        vcard = vobject.vCard()
+
+        # Required fields
+        vcard.add('uid').value = contact_uid
+        vcard.add('fn').value = formatted_name
+        vcard.add('version').value = '3.0'
+
+        # Name components
+        n = vcard.add('n')
+        n.value = vobject.vcard.Name(
+            family=last_name or '',
+            given=first_name or ''
+        )
+
+        # Optional fields
+        if emails:
+            for email in emails:
+                email_prop = vcard.add('email')
+                email_prop.value = email
+                email_prop.type_param = 'INTERNET'
+
+        if phones:
+            for phone in phones:
+                tel = vcard.add('tel')
+                tel.value = phone.get('number', '')
+                tel.type_param = phone.get('type', 'CELL')
+
+        if organization:
+            vcard.add('org').value = [organization]
+
+        if title:
+            vcard.add('title').value = title
+
+        if notes:
+            vcard.add('note').value = notes
+
+        if addresses:
+            for addr in addresses:
+                adr = vcard.add('adr')
+                adr.type_param = addr.get('type', 'HOME')
+                # Parse formatted address back to components if needed
+                adr.value = vobject.vcard.Address(
+                    street=addr.get('street', ''),
+                    city=addr.get('city', ''),
+                    region=addr.get('region', ''),
+                    code=addr.get('postal', ''),
+                    country=addr.get('country', '')
+                )
+
+        # Write VCF file
+        file_path = addr_dir / f"{contact_uid}.vcf"
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(vcard.serialize())
+
+        # Parse back to verify and return Contact object
+        contacts = self._parse_vcf_file(file_path, addressbook)
+        if contacts:
+            return contacts[0]
+
+        # Fallback: construct Contact manually
+        return Contact(
+            uid=contact_uid,
+            formatted_name=formatted_name,
+            first_name=first_name,
+            last_name=last_name,
+            emails=emails,
+            phones=phones,
+            organization=organization,
+            title=title,
+            notes=notes,
+            addresses=None,  # Simplified
+            file_path=str(file_path)
+        )
+
+    def update_contact(
+        self,
+        uid: Optional[str] = None,
+        name: Optional[str] = None,
+        formatted_name: Optional[str] = None,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        emails: Optional[List[str]] = None,
+        phones: Optional[List[Dict[str, str]]] = None,
+        organization: Optional[str] = None,
+        title: Optional[str] = None,
+        notes: Optional[str] = None,
+        addresses: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Update an existing contact.
+
+        Args:
+            uid: Contact UID (required if name not provided)
+            name: Contact name for lookup (required if uid not provided)
+            formatted_name: New display name
+            first_name: New first name
+            last_name: New last name
+            emails: New email list (replaces existing)
+            phones: New phone list (replaces existing)
+            organization: New organization
+            title: New job title
+            notes: New notes
+            addresses: New address list (replaces existing)
+
+        Returns:
+            Dict with updated contact and backup_path
+
+        Raises:
+            ValueError: If contact not found or no identifier provided
+        """
+        if not uid and not name:
+            raise ValueError("Must provide either uid or name to identify contact")
+
+        # Find the contact
+        contact = self.get_contact(uid=uid, name=name)
+        if not contact:
+            raise ValueError(f"Contact not found: {uid or name}")
+
+        if not contact.file_path:
+            raise ValueError("Contact has no associated file")
+
+        file_path = Path(contact.file_path)
+        if not file_path.exists():
+            raise ValueError(f"Contact file not found: {file_path}")
+
+        # Create backup before modification
+        backup_path = self._backup_vcf(file_path)
+
+        # Read existing vCard
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        vcards = list(vobject.readComponents(content))
+        if not vcards:
+            raise ValueError("Failed to parse existing vCard")
+
+        vcard = vcards[0]
+
+        # Update fields (only if provided)
+        if formatted_name is not None:
+            if hasattr(vcard, 'fn'):
+                vcard.fn.value = formatted_name
+            else:
+                vcard.add('fn').value = formatted_name
+
+        if first_name is not None or last_name is not None:
+            if hasattr(vcard, 'n'):
+                n = vcard.n.value
+                if first_name is not None:
+                    n.given = first_name
+                if last_name is not None:
+                    n.family = last_name
+            else:
+                n = vcard.add('n')
+                n.value = vobject.vcard.Name(
+                    family=last_name or '',
+                    given=first_name or ''
+                )
+
+        if emails is not None:
+            # Remove existing emails
+            if 'email' in vcard.contents:
+                del vcard.contents['email']
+            # Add new emails
+            for email in emails:
+                email_prop = vcard.add('email')
+                email_prop.value = email
+                email_prop.type_param = 'INTERNET'
+
+        if phones is not None:
+            # Remove existing phones
+            if 'tel' in vcard.contents:
+                del vcard.contents['tel']
+            # Add new phones
+            for phone in phones:
+                tel = vcard.add('tel')
+                tel.value = phone.get('number', '')
+                tel.type_param = phone.get('type', 'CELL')
+
+        if organization is not None:
+            if hasattr(vcard, 'org'):
+                vcard.org.value = [organization]
+            else:
+                vcard.add('org').value = [organization]
+
+        if title is not None:
+            if hasattr(vcard, 'title'):
+                vcard.title.value = title
+            else:
+                vcard.add('title').value = title
+
+        if notes is not None:
+            if hasattr(vcard, 'note'):
+                vcard.note.value = notes
+            else:
+                vcard.add('note').value = notes
+
+        if addresses is not None:
+            # Remove existing addresses
+            if 'adr' in vcard.contents:
+                del vcard.contents['adr']
+            # Add new addresses
+            for addr in addresses:
+                adr = vcard.add('adr')
+                adr.type_param = addr.get('type', 'HOME')
+                adr.value = vobject.vcard.Address(
+                    street=addr.get('street', ''),
+                    city=addr.get('city', ''),
+                    region=addr.get('region', ''),
+                    code=addr.get('postal', ''),
+                    country=addr.get('country', '')
+                )
+
+        # Write updated vCard
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(vcard.serialize())
+
+        # Parse back to get updated Contact
+        addressbook = file_path.parent.name
+        contacts = self._parse_vcf_file(file_path, addressbook)
+        updated_contact = contacts[0] if contacts else contact
+
+        return {
+            "contact": updated_contact.to_dict(),
+            "backup_path": backup_path
+        }
+
+    def delete_contact(
+        self,
+        uid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Delete a contact.
+
+        Args:
+            uid: Contact UID (required if name not provided)
+            name: Contact name for lookup (required if uid not provided)
+
+        Returns:
+            Dict with deleted contact info and backup_path
+
+        Raises:
+            ValueError: If contact not found or no identifier provided
+        """
+        if not uid and not name:
+            raise ValueError("Must provide either uid or name to identify contact")
+
+        # Find the contact
+        contact = self.get_contact(uid=uid, name=name)
+        if not contact:
+            raise ValueError(f"Contact not found: {uid or name}")
+
+        if not contact.file_path:
+            raise ValueError("Contact has no associated file")
+
+        file_path = Path(contact.file_path)
+        if not file_path.exists():
+            raise ValueError(f"Contact file not found: {file_path}")
+
+        # Create backup before deletion
+        backup_path = self._backup_vcf(file_path)
+
+        # Store contact info before deletion
+        contact_info = contact.to_dict()
+
+        # Delete the file
+        file_path.unlink()
+
+        return {
+            "deleted": contact_info,
+            "backup_path": backup_path
+        }

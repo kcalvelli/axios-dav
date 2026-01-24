@@ -255,6 +255,137 @@ class MCPServer:
                     },
                     "additionalProperties": False
                 }
+            },
+            {
+                "name": "create_contact",
+                "description": "Create a new contact. After creation, run 'vdirsyncer sync' to sync to remote.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "formatted_name": {
+                            "type": "string",
+                            "description": "Full display name (e.g., 'John Doe')."
+                        },
+                        "addressbook": {
+                            "type": "string",
+                            "description": "Addressbook name to create contact in."
+                        },
+                        "first_name": {
+                            "type": "string",
+                            "description": "First/given name."
+                        },
+                        "last_name": {
+                            "type": "string",
+                            "description": "Last/family name."
+                        },
+                        "emails": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of email addresses."
+                        },
+                        "phones": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {"type": "string", "description": "Phone type (CELL, HOME, WORK)"},
+                                    "number": {"type": "string", "description": "Phone number"}
+                                }
+                            },
+                            "description": "List of phone numbers with type."
+                        },
+                        "organization": {
+                            "type": "string",
+                            "description": "Company/organization name."
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Job title."
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Notes/comments."
+                        }
+                    },
+                    "required": ["formatted_name", "addressbook"],
+                    "additionalProperties": False
+                }
+            },
+            {
+                "name": "update_contact",
+                "description": "Update an existing contact. Only specified fields are modified. Creates a backup before changes.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "uid": {
+                            "type": "string",
+                            "description": "Contact UID (required if name not provided)."
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Contact name to find (required if uid not provided)."
+                        },
+                        "formatted_name": {
+                            "type": "string",
+                            "description": "New full display name."
+                        },
+                        "first_name": {
+                            "type": "string",
+                            "description": "New first/given name."
+                        },
+                        "last_name": {
+                            "type": "string",
+                            "description": "New last/family name."
+                        },
+                        "emails": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "New list of email addresses (replaces existing)."
+                        },
+                        "phones": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {"type": "string"},
+                                    "number": {"type": "string"}
+                                }
+                            },
+                            "description": "New list of phone numbers (replaces existing)."
+                        },
+                        "organization": {
+                            "type": "string",
+                            "description": "New organization name."
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "New job title."
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "New notes."
+                        }
+                    },
+                    "additionalProperties": False
+                }
+            },
+            {
+                "name": "delete_contact",
+                "description": "Delete a contact. Creates a backup before deletion.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "uid": {
+                            "type": "string",
+                            "description": "Contact UID (required if name not provided)."
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Contact name to find (required if uid not provided)."
+                        }
+                    },
+                    "additionalProperties": False
+                }
             }
         ]
 
@@ -325,6 +456,57 @@ class MCPServer:
                 return self._format_result(contact.to_dict())
             else:
                 return self._format_result({"error": "Contact not found"})
+
+        elif tool_name == "create_contact":
+            try:
+                contact = self.contacts.create_contact(
+                    formatted_name=args["formatted_name"],
+                    addressbook=args["addressbook"],
+                    first_name=args.get("first_name"),
+                    last_name=args.get("last_name"),
+                    emails=args.get("emails"),
+                    phones=args.get("phones"),
+                    organization=args.get("organization"),
+                    title=args.get("title"),
+                    notes=args.get("notes"),
+                    addresses=args.get("addresses")
+                )
+                result = contact.to_dict()
+                result["_note"] = "Contact created locally. Run 'vdirsyncer sync' to sync to remote."
+                return self._format_result(result)
+            except ValueError as e:
+                return self._format_result({"error": str(e)})
+
+        elif tool_name == "update_contact":
+            try:
+                result = self.contacts.update_contact(
+                    uid=args.get("uid"),
+                    name=args.get("name"),
+                    formatted_name=args.get("formatted_name"),
+                    first_name=args.get("first_name"),
+                    last_name=args.get("last_name"),
+                    emails=args.get("emails"),
+                    phones=args.get("phones"),
+                    organization=args.get("organization"),
+                    title=args.get("title"),
+                    notes=args.get("notes"),
+                    addresses=args.get("addresses")
+                )
+                result["_note"] = "Contact updated locally. Run 'vdirsyncer sync' to sync to remote."
+                return self._format_result(result)
+            except ValueError as e:
+                return self._format_result({"error": str(e)})
+
+        elif tool_name == "delete_contact":
+            try:
+                result = self.contacts.delete_contact(
+                    uid=args.get("uid"),
+                    name=args.get("name")
+                )
+                result["_note"] = "Contact deleted locally. Run 'vdirsyncer sync' to sync to remote."
+                return self._format_result(result)
+            except ValueError as e:
+                return self._format_result({"error": str(e)})
 
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
@@ -413,6 +595,9 @@ def main():
         print("  list_contacts         List contacts")
         print("  search_contacts       Search contacts")
         print("  get_contact           Get contact details")
+        print("  create_contact        Create new contact")
+        print("  update_contact        Update existing contact")
+        print("  delete_contact        Delete contact")
         sys.exit(0)
 
     # Parse custom paths from environment
