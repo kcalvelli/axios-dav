@@ -2,52 +2,53 @@
 
 ## Phase 1: Flake Foundation
 
-- [ ] Create `flake.nix` with:
-  - [ ] nixpkgs input
-  - [ ] home-manager input (for home modules)
-  - [ ] NixOS module output (`nixosModules.default`)
-  - [ ] home-manager module output (`homeModules.default`)
-  - [ ] Package output for mcp-dav (`packages.${system}.mcp-dav`)
-  - [ ] Overlay output (`overlays.default`)
-- [ ] Create `modules/default.nix` with option skeleton
-- [ ] Create `home/default.nix` with home-manager module skeleton
-- [ ] Verify `nix flake check` passes
-- [ ] Create basic README.md
+- [x] Create `flake.nix` with:
+  - [x] nixpkgs input
+  - [x] home-manager input (for home modules)
+  - [x] NixOS module output (`nixosModules.default`)
+  - [x] home-manager module output (`homeModules.default`)
+  - [x] Package output for mcp-dav (`packages.${system}.mcp-dav`)
+  - [x] Overlay output (`overlays.default`)
+- [x] Create `modules/default.nix` with option skeleton
+- [x] Create `home/default.nix` with home-manager module skeleton
+- [x] Verify `nix flake check` passes
+- [x] Create basic README.md
+- [x] Create GitHub repository
 
 ## Phase 2: vdirsyncer Config Generation
 
-- [ ] Define `services.axios-dav.calendar.accounts` option type
-- [ ] Implement vdirsyncer config generation:
-  - [ ] `[general]` section with status_path
-  - [ ] `[storage]` sections for each account
-  - [ ] `[pair]` sections linking remote to local
-- [ ] Support storage types:
-  - [ ] `google_calendar` (OAuth)
-  - [ ] `caldav` (username/password)
-  - [ ] `http` (read-only ICS)
-- [ ] Generate `~/.config/vdirsyncer/config` via home-manager
-- [ ] Create systemd user service for `vdirsyncer sync`
-- [ ] Create systemd user timer (configurable frequency)
-- [ ] Create systemd service for `vdirsyncer metasync` (daily)
+- [x] Define `services.axios-dav.calendar.accounts` option type
+- [x] Implement vdirsyncer config generation:
+  - [x] `[general]` section with status_path
+  - [x] `[storage]` sections for each account
+  - [x] `[pair]` sections linking remote to local
+- [x] Support storage types:
+  - [x] `google_calendar` (OAuth)
+  - [x] `caldav` (username/password)
+  - [x] `http` (read-only ICS)
+- [x] Generate `~/.config/vdirsyncer/config` via home-manager
+- [x] Create systemd user service for `vdirsyncer sync`
+- [x] Create systemd user timer (configurable frequency)
+- [x] Create systemd service for `vdirsyncer metasync` (daily)
 - [ ] Test with actual Google Calendar account
 
 ## Phase 3: khal Config Generation
 
-- [ ] Define khal-specific options (locale, default calendar)
-- [ ] Generate `~/.config/khal/config`:
-  - [ ] `[calendars]` section pointing to vdirsyncer paths
-  - [ ] `[locale]` section with time/date formats
-  - [ ] `[default]` section with default calendar
+- [x] Define khal-specific options (locale, default calendar)
+- [x] Generate `~/.config/khal/config`:
+  - [x] `[calendars]` section pointing to vdirsyncer paths
+  - [x] `[locale]` section with time/date formats
+  - [x] `[default]` section with default calendar
 - [ ] Verify `khal list` works with synced data
 - [ ] Verify `khal new` creates events that sync
 
 ## Phase 4: Contacts Support
 
-- [ ] Define `services.axios-dav.contacts.accounts` option type
-- [ ] Add vdirsyncer config generation for contacts:
-  - [ ] `google_contacts` storage
-  - [ ] `carddav` storage
-- [ ] Generate `~/.config/khard/config`
+- [x] Define `services.axios-dav.contacts.accounts` option type
+- [x] Add vdirsyncer config generation for contacts:
+  - [x] `google_contacts` storage
+  - [x] `carddav` storage
+- [x] Generate `~/.config/khard/config`
 - [ ] Verify `khard list` works with synced data
 
 ## Phase 5: MCP Server
@@ -72,12 +73,12 @@
 
 ## Phase 6: Documentation & Polish
 
-- [ ] Write comprehensive README.md:
-  - [ ] Project overview
-  - [ ] Installation (standalone + axios)
-  - [ ] Configuration examples
-  - [ ] Google OAuth setup guide
-  - [ ] MCP tools reference
+- [x] Write comprehensive README.md:
+  - [x] Project overview
+  - [x] Installation (standalone + axios)
+  - [x] Configuration examples
+  - [x] Google OAuth setup guide
+  - [x] MCP tools reference
 - [ ] Add CHANGELOG.md
 - [ ] Add LICENSE (MIT or similar)
 - [ ] Create GitHub Actions workflow:
@@ -89,7 +90,7 @@
 
 Before marking complete:
 
-- [ ] `nix flake check` passes
+- [x] `nix flake check` passes
 - [ ] Can sync Google Calendar with declarative config
 - [ ] Can create event with `khal new` and see it sync to Google
 - [ ] `khal list` shows correct events
@@ -97,4 +98,4 @@ Before marking complete:
 - [ ] MCP `list_events` returns synced events
 - [ ] MCP `create_event` creates event that syncs
 - [ ] Works without axios (standalone)
-- [ ] README has complete setup instructions
+- [x] README has complete setup instructions
