@@ -2,582 +2,266 @@
 """
 MCP DAV Server - Calendar and Contacts access via MCP protocol
 
-Provides tools for AI agents to:
+Uses FastMCP for protocol handling. Provides tools for AI agents to:
 - List and search calendar events
 - Create new calendar events
 - Check free/busy times
 - List and search contacts
+- Create, update, and delete contacts
 """
 
-import sys
 import json
 import os
-from typing import Any, Dict, List, Optional
+import sys
+from typing import Optional
+
+from fastmcp import FastMCP
 
 from .calendar import CalendarManager
 from .contacts import ContactsManager
 
+# Initialize FastMCP server
+mcp = FastMCP("mcp-dav")
 
-class MCPServer:
-    """MCP protocol server for calendar and contacts access"""
+# Initialize managers (will be set up in main())
+_calendar: Optional[CalendarManager] = None
+_contacts: Optional[ContactsManager] = None
 
-    VERSION = "0.1.0"
 
-    def __init__(self, calendars_path: str = None, contacts_path: str = None):
-        # Use environment variables or defaults
-        calendars_path = calendars_path or os.environ.get("MCP_DAV_CALENDARS", "~/.calendars")
-        contacts_path = contacts_path or os.environ.get("MCP_DAV_CONTACTS", "~/.contacts")
+def _get_calendar() -> CalendarManager:
+    """Get the calendar manager, initializing if needed."""
+    global _calendar
+    if _calendar is None:
+        calendars_path = os.environ.get("MCP_DAV_CALENDARS", "~/.calendars")
+        _calendar = CalendarManager(calendars_path)
+    return _calendar
 
-        self.calendar = CalendarManager(calendars_path)
-        self.contacts = ContactsManager(contacts_path)
 
-        sys.stderr.write(f"[INFO] MCP DAV Server v{self.VERSION} ready\n")
-        sys.stderr.write(f"[INFO] Calendars: {calendars_path}\n")
-        sys.stderr.write(f"[INFO] Contacts: {contacts_path}\n")
+def _get_contacts() -> ContactsManager:
+    """Get the contacts manager, initializing if needed."""
+    global _contacts
+    if _contacts is None:
+        contacts_path = os.environ.get("MCP_DAV_CONTACTS", "~/.contacts")
+        _contacts = ContactsManager(contacts_path)
+    return _contacts
 
-    def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle MCP JSON-RPC request"""
 
-        method = request.get("method")
-        req_id = request.get("id")
-        params = request.get("params", {})
+# =============================================================================
+# Calendar Tools
+# =============================================================================
 
-        try:
-            if method == "initialize":
-                return self._make_response(req_id, {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {}
-                    },
-                    "serverInfo": {
-                        "name": "mcp-dav",
-                        "version": self.VERSION
-                    }
-                })
 
-            elif method == "notifications/initialized":
-                # Client notification, no response needed
-                return None
+@mcp.tool()
+def list_events(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    calendar: Optional[str] = None,
+) -> str:
+    """List calendar events in a date range. Returns events with summary, start/end times, location, and calendar name."""
+    events = _get_calendar().list_events(
+        start_date=start_date,
+        end_date=end_date,
+        calendar=calendar,
+    )
+    return json.dumps([e.to_dict() for e in events], indent=2, default=str)
 
-            elif method == "tools/list":
-                return self._make_response(req_id, {
-                    "tools": self._get_tools()
-                })
 
-            elif method == "tools/call":
-                tool_name = params.get("name")
-                arguments = params.get("arguments", {})
-                result = self._handle_tool_call(tool_name, arguments)
-                return self._make_response(req_id, result)
+@mcp.tool()
+def search_events(
+    query: str,
+    calendar: Optional[str] = None,
+    limit: int = 50,
+) -> str:
+    """Search calendar events by text in summary, description, or location."""
+    events = _get_calendar().search_events(
+        query=query,
+        calendar=calendar,
+        limit=limit,
+    )
+    return json.dumps([e.to_dict() for e in events], indent=2, default=str)
 
-            else:
-                # Unknown method - return empty response for notifications
-                if req_id is None:
-                    return None
-                raise ValueError(f"Unknown method: {method}")
 
-        except Exception as e:
-            sys.stderr.write(f"[ERROR] {e}\n")
-            return self._make_error(req_id, -32603, str(e))
+@mcp.tool()
+def create_event(
+    summary: str,
+    start: str,
+    end: str,
+    calendar: str,
+    location: Optional[str] = None,
+    description: Optional[str] = None,
+    all_day: bool = False,
+) -> str:
+    """Create a new calendar event. After creation, run 'vdirsyncer sync' to sync to remote."""
+    event = _get_calendar().create_event(
+        summary=summary,
+        start=start,
+        end=end,
+        calendar=calendar,
+        location=location,
+        description=description,
+        all_day=all_day,
+    )
+    result = event.to_dict()
+    result["_note"] = "Event created locally. Run 'vdirsyncer sync' to sync to remote calendar."
+    return json.dumps(result, indent=2, default=str)
 
-    def _get_tools(self) -> List[Dict[str, Any]]:
-        """Return list of available tools"""
-        return [
-            # Calendar tools
-            {
-                "name": "list_events",
-                "description": "List calendar events in a date range. Returns events with summary, start/end times, location, and calendar name.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "start_date": {
-                            "type": "string",
-                            "description": "Start date in ISO8601 format (YYYY-MM-DD). Defaults to today."
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "description": "End date in ISO8601 format (YYYY-MM-DD). Defaults to 30 days from start."
-                        },
-                        "calendar": {
-                            "type": "string",
-                            "description": "Optional calendar name to filter by."
-                        }
-                    },
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "search_events",
-                "description": "Search calendar events by text in summary, description, or location.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search text (case-insensitive)."
-                        },
-                        "calendar": {
-                            "type": "string",
-                            "description": "Optional calendar name to filter by."
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum results (default: 50).",
-                            "default": 50
-                        }
-                    },
-                    "required": ["query"],
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "create_event",
-                "description": "Create a new calendar event. After creation, run 'vdirsyncer sync' to sync to remote.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "summary": {
-                            "type": "string",
-                            "description": "Event title."
-                        },
-                        "start": {
-                            "type": "string",
-                            "description": "Start datetime in ISO8601 format (YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD for all-day)."
-                        },
-                        "end": {
-                            "type": "string",
-                            "description": "End datetime in ISO8601 format."
-                        },
-                        "calendar": {
-                            "type": "string",
-                            "description": "Calendar name to create event in (e.g., 'Family')."
-                        },
-                        "location": {
-                            "type": "string",
-                            "description": "Optional event location."
-                        },
-                        "description": {
-                            "type": "string",
-                            "description": "Optional event description."
-                        },
-                        "all_day": {
-                            "type": "boolean",
-                            "description": "Whether this is an all-day event.",
-                            "default": False
-                        }
-                    },
-                    "required": ["summary", "start", "end", "calendar"],
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "get_free_busy",
-                "description": "Get busy time slots in a date range. Useful for finding available meeting times.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "start_date": {
-                            "type": "string",
-                            "description": "Start date in ISO8601 format (YYYY-MM-DD)."
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "description": "End date in ISO8601 format (YYYY-MM-DD)."
-                        },
-                        "calendars": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "Optional list of calendar names to check."
-                        }
-                    },
-                    "required": ["start_date", "end_date"],
-                    "additionalProperties": False
-                }
-            },
-            # Contacts tools
-            {
-                "name": "list_contacts",
-                "description": "List contacts from address book.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "addressbook": {
-                            "type": "string",
-                            "description": "Optional addressbook name to filter by."
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum results (default: 100).",
-                            "default": 100
-                        }
-                    },
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "search_contacts",
-                "description": "Search contacts by name, email, phone, or organization.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search text (case-insensitive)."
-                        },
-                        "addressbook": {
-                            "type": "string",
-                            "description": "Optional addressbook name to filter by."
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum results (default: 50).",
-                            "default": 50
-                        }
-                    },
-                    "required": ["query"],
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "get_contact",
-                "description": "Get detailed information for a single contact.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "uid": {
-                            "type": "string",
-                            "description": "Contact UID."
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Contact name (partial match)."
-                        }
-                    },
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "create_contact",
-                "description": "Create a new contact. After creation, run 'vdirsyncer sync' to sync to remote.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "formatted_name": {
-                            "type": "string",
-                            "description": "Full display name (e.g., 'John Doe')."
-                        },
-                        "addressbook": {
-                            "type": "string",
-                            "description": "Addressbook name to create contact in."
-                        },
-                        "first_name": {
-                            "type": "string",
-                            "description": "First/given name."
-                        },
-                        "last_name": {
-                            "type": "string",
-                            "description": "Last/family name."
-                        },
-                        "emails": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of email addresses."
-                        },
-                        "phones": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "type": {"type": "string", "description": "Phone type (CELL, HOME, WORK)"},
-                                    "number": {"type": "string", "description": "Phone number"}
-                                }
-                            },
-                            "description": "List of phone numbers with type."
-                        },
-                        "organization": {
-                            "type": "string",
-                            "description": "Company/organization name."
-                        },
-                        "title": {
-                            "type": "string",
-                            "description": "Job title."
-                        },
-                        "notes": {
-                            "type": "string",
-                            "description": "Notes/comments."
-                        }
-                    },
-                    "required": ["formatted_name", "addressbook"],
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "update_contact",
-                "description": "Update an existing contact. Only specified fields are modified. Creates a backup before changes.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "uid": {
-                            "type": "string",
-                            "description": "Contact UID (required if name not provided)."
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Contact name to find (required if uid not provided)."
-                        },
-                        "formatted_name": {
-                            "type": "string",
-                            "description": "New full display name."
-                        },
-                        "first_name": {
-                            "type": "string",
-                            "description": "New first/given name."
-                        },
-                        "last_name": {
-                            "type": "string",
-                            "description": "New last/family name."
-                        },
-                        "emails": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "New list of email addresses (replaces existing)."
-                        },
-                        "phones": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "type": {"type": "string"},
-                                    "number": {"type": "string"}
-                                }
-                            },
-                            "description": "New list of phone numbers (replaces existing)."
-                        },
-                        "organization": {
-                            "type": "string",
-                            "description": "New organization name."
-                        },
-                        "title": {
-                            "type": "string",
-                            "description": "New job title."
-                        },
-                        "notes": {
-                            "type": "string",
-                            "description": "New notes."
-                        }
-                    },
-                    "additionalProperties": False
-                }
-            },
-            {
-                "name": "delete_contact",
-                "description": "Delete a contact. Creates a backup before deletion.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "uid": {
-                            "type": "string",
-                            "description": "Contact UID (required if name not provided)."
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Contact name to find (required if uid not provided)."
-                        }
-                    },
-                    "additionalProperties": False
-                }
-            }
-        ]
 
-    def _handle_tool_call(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle tool call and return result"""
+@mcp.tool()
+def get_free_busy(
+    start_date: str,
+    end_date: str,
+    calendars: Optional[list[str]] = None,
+) -> str:
+    """Get busy time slots in a date range. Useful for finding available meeting times."""
+    busy = _get_calendar().get_free_busy(
+        start_date=start_date,
+        end_date=end_date,
+        calendars=calendars,
+    )
+    return json.dumps({"busy_periods": busy}, indent=2, default=str)
 
-        # Calendar tools
-        if tool_name == "list_events":
-            events = self.calendar.list_events(
-                start_date=args.get("start_date"),
-                end_date=args.get("end_date"),
-                calendar=args.get("calendar")
-            )
-            return self._format_result([e.to_dict() for e in events])
 
-        elif tool_name == "search_events":
-            events = self.calendar.search_events(
-                query=args.get("query", ""),
-                calendar=args.get("calendar"),
-                limit=args.get("limit", 50)
-            )
-            return self._format_result([e.to_dict() for e in events])
+# =============================================================================
+# Contacts Tools
+# =============================================================================
 
-        elif tool_name == "create_event":
-            event = self.calendar.create_event(
-                summary=args["summary"],
-                start=args["start"],
-                end=args["end"],
-                calendar=args["calendar"],
-                location=args.get("location"),
-                description=args.get("description"),
-                all_day=args.get("all_day", False)
-            )
-            result = event.to_dict()
-            result["_note"] = "Event created locally. Run 'vdirsyncer sync' to sync to remote calendar."
-            return self._format_result(result)
 
-        elif tool_name == "get_free_busy":
-            busy = self.calendar.get_free_busy(
-                start_date=args["start_date"],
-                end_date=args["end_date"],
-                calendars=args.get("calendars")
-            )
-            return self._format_result({"busy_periods": busy})
+@mcp.tool()
+def list_contacts(
+    addressbook: Optional[str] = None,
+    limit: int = 100,
+) -> str:
+    """List contacts from address book."""
+    contacts = _get_contacts().list_contacts(
+        addressbook=addressbook,
+        limit=limit,
+    )
+    return json.dumps([c.to_dict() for c in contacts], indent=2, default=str)
 
-        # Contacts tools
-        elif tool_name == "list_contacts":
-            contacts = self.contacts.list_contacts(
-                addressbook=args.get("addressbook"),
-                limit=args.get("limit", 100)
-            )
-            return self._format_result([c.to_dict() for c in contacts])
 
-        elif tool_name == "search_contacts":
-            contacts = self.contacts.search_contacts(
-                query=args.get("query", ""),
-                addressbook=args.get("addressbook"),
-                limit=args.get("limit", 50)
-            )
-            return self._format_result([c.to_dict() for c in contacts])
+@mcp.tool()
+def search_contacts(
+    query: str,
+    addressbook: Optional[str] = None,
+    limit: int = 50,
+) -> str:
+    """Search contacts by name, email, phone, or organization."""
+    contacts = _get_contacts().search_contacts(
+        query=query,
+        addressbook=addressbook,
+        limit=limit,
+    )
+    return json.dumps([c.to_dict() for c in contacts], indent=2, default=str)
 
-        elif tool_name == "get_contact":
-            contact = self.contacts.get_contact(
-                uid=args.get("uid"),
-                name=args.get("name")
-            )
-            if contact:
-                return self._format_result(contact.to_dict())
-            else:
-                return self._format_result({"error": "Contact not found"})
 
-        elif tool_name == "create_contact":
-            try:
-                contact = self.contacts.create_contact(
-                    formatted_name=args["formatted_name"],
-                    addressbook=args["addressbook"],
-                    first_name=args.get("first_name"),
-                    last_name=args.get("last_name"),
-                    emails=args.get("emails"),
-                    phones=args.get("phones"),
-                    organization=args.get("organization"),
-                    title=args.get("title"),
-                    notes=args.get("notes"),
-                    addresses=args.get("addresses")
-                )
-                result = contact.to_dict()
-                result["_note"] = "Contact created locally. Run 'vdirsyncer sync' to sync to remote."
-                return self._format_result(result)
-            except ValueError as e:
-                return self._format_result({"error": str(e)})
+@mcp.tool()
+def get_contact(
+    uid: Optional[str] = None,
+    name: Optional[str] = None,
+) -> str:
+    """Get detailed information for a single contact."""
+    contact = _get_contacts().get_contact(uid=uid, name=name)
+    if contact:
+        return json.dumps(contact.to_dict(), indent=2, default=str)
+    else:
+        return json.dumps({"error": "Contact not found"}, indent=2)
 
-        elif tool_name == "update_contact":
-            try:
-                result = self.contacts.update_contact(
-                    uid=args.get("uid"),
-                    name=args.get("name"),
-                    formatted_name=args.get("formatted_name"),
-                    first_name=args.get("first_name"),
-                    last_name=args.get("last_name"),
-                    emails=args.get("emails"),
-                    phones=args.get("phones"),
-                    organization=args.get("organization"),
-                    title=args.get("title"),
-                    notes=args.get("notes"),
-                    addresses=args.get("addresses")
-                )
-                result["_note"] = "Contact updated locally. Run 'vdirsyncer sync' to sync to remote."
-                return self._format_result(result)
-            except ValueError as e:
-                return self._format_result({"error": str(e)})
 
-        elif tool_name == "delete_contact":
-            try:
-                result = self.contacts.delete_contact(
-                    uid=args.get("uid"),
-                    name=args.get("name")
-                )
-                result["_note"] = "Contact deleted locally. Run 'vdirsyncer sync' to sync to remote."
-                return self._format_result(result)
-            except ValueError as e:
-                return self._format_result({"error": str(e)})
+@mcp.tool()
+def create_contact(
+    formatted_name: str,
+    addressbook: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    emails: Optional[list[str]] = None,
+    phones: Optional[list[dict]] = None,
+    organization: Optional[str] = None,
+    title: Optional[str] = None,
+    notes: Optional[str] = None,
+) -> str:
+    """Create a new contact. After creation, run 'vdirsyncer sync' to sync to remote."""
+    try:
+        contact = _get_contacts().create_contact(
+            formatted_name=formatted_name,
+            addressbook=addressbook,
+            first_name=first_name,
+            last_name=last_name,
+            emails=emails,
+            phones=phones,
+            organization=organization,
+            title=title,
+            notes=notes,
+        )
+        result = contact.to_dict()
+        result["_note"] = "Contact created locally. Run 'vdirsyncer sync' to sync to remote."
+        return json.dumps(result, indent=2, default=str)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, indent=2)
 
-        else:
-            raise ValueError(f"Unknown tool: {tool_name}")
 
-    def _format_result(self, data: Any) -> Dict[str, Any]:
-        """Format tool result for MCP response"""
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps(data, indent=2, default=str)
-                }
-            ]
-        }
+@mcp.tool()
+def update_contact(
+    uid: Optional[str] = None,
+    name: Optional[str] = None,
+    formatted_name: Optional[str] = None,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    emails: Optional[list[str]] = None,
+    phones: Optional[list[dict]] = None,
+    organization: Optional[str] = None,
+    title: Optional[str] = None,
+    notes: Optional[str] = None,
+) -> str:
+    """Update an existing contact. Only specified fields are modified. Creates a backup before changes."""
+    try:
+        result = _get_contacts().update_contact(
+            uid=uid,
+            name=name,
+            formatted_name=formatted_name,
+            first_name=first_name,
+            last_name=last_name,
+            emails=emails,
+            phones=phones,
+            organization=organization,
+            title=title,
+            notes=notes,
+        )
+        result["_note"] = "Contact updated locally. Run 'vdirsyncer sync' to sync to remote."
+        return json.dumps(result, indent=2, default=str)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, indent=2)
 
-    def _make_response(self, req_id: Any, result: Any) -> Dict[str, Any]:
-        """Create JSON-RPC success response"""
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": result
-        }
 
-    def _make_error(self, req_id: Any, code: int, message: str) -> Dict[str, Any]:
-        """Create JSON-RPC error response"""
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {
-                "code": code,
-                "message": message
-            }
-        }
+@mcp.tool()
+def delete_contact(
+    uid: Optional[str] = None,
+    name: Optional[str] = None,
+) -> str:
+    """Delete a contact. Creates a backup before deletion."""
+    try:
+        result = _get_contacts().delete_contact(uid=uid, name=name)
+        result["_note"] = "Contact deleted locally. Run 'vdirsyncer sync' to sync to remote."
+        return json.dumps(result, indent=2, default=str)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, indent=2)
 
-    def run(self):
-        """Main server loop - read from stdin, write to stdout"""
 
-        for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
-
-            try:
-                request = json.loads(line)
-                response = self.handle_request(request)
-
-                if response is not None:
-                    print(json.dumps(response), flush=True)
-
-            except json.JSONDecodeError as e:
-                sys.stderr.write(f"[ERROR] Invalid JSON: {e}\n")
-                error_resp = self._make_error(None, -32700, "Parse error")
-                print(json.dumps(error_resp), flush=True)
-
-            except Exception as e:
-                sys.stderr.write(f"[ERROR] Unexpected error: {e}\n")
-                error_resp = self._make_error(None, -32603, str(e))
-                print(json.dumps(error_resp), flush=True)
+# =============================================================================
+# Entry Point
+# =============================================================================
 
 
 def main():
-    """Entry point"""
-
+    """Entry point - run the MCP server."""
     if "--version" in sys.argv:
-        print(f"mcp-dav {MCPServer.VERSION}")
+        print("mcp-dav 0.1.0")
         sys.exit(0)
 
     if "--help" in sys.argv:
         print("Usage: mcp-dav [OPTIONS]")
         print()
         print("MCP server for calendar and contacts access.")
+        print("Uses FastMCP for protocol handling.")
         print()
         print("Options:")
         print("  --version             Show version")
@@ -600,21 +284,15 @@ def main():
         print("  delete_contact        Delete contact")
         sys.exit(0)
 
-    # Parse custom paths from environment
-    calendars_path = os.environ.get("MCP_DAV_CALENDARS")
-    contacts_path = os.environ.get("MCP_DAV_CONTACTS")
+    # Log startup info to stderr
+    calendars_path = os.environ.get("MCP_DAV_CALENDARS", "~/.calendars")
+    contacts_path = os.environ.get("MCP_DAV_CONTACTS", "~/.contacts")
+    sys.stderr.write(f"[INFO] MCP DAV Server v0.1.0 (FastMCP) ready\n")
+    sys.stderr.write(f"[INFO] Calendars: {calendars_path}\n")
+    sys.stderr.write(f"[INFO] Contacts: {contacts_path}\n")
 
-    # Create and run server
-    server = MCPServer(
-        calendars_path=calendars_path,
-        contacts_path=contacts_path
-    )
-
-    try:
-        server.run()
-    except KeyboardInterrupt:
-        sys.stderr.write("\n[INFO] Shutting down gracefully\n")
-        sys.exit(0)
+    # Run the FastMCP server
+    mcp.run()
 
 
 if __name__ == "__main__":

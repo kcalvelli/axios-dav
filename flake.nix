@@ -70,6 +70,7 @@
             dependencies = with pkgs.python3Packages; [
               icalendar # For parsing .ics calendar files
               vobject # For parsing .vcf contact files
+              fastmcp # MCP server framework
             ];
 
             # No tests yet
