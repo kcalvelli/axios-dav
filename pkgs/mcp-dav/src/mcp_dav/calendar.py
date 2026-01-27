@@ -31,7 +31,21 @@ class CalendarManager:
     """Manages calendar data from local vdirsyncer directories"""
 
     def __init__(self, calendars_path: str = "~/.calendars"):
-        self.calendars_path = Path(calendars_path).expanduser()
+        """Initialize CalendarManager.
+
+        Args:
+            calendars_path: Path(s) to calendars directory. Can be a single path
+                           or multiple paths separated by colons (like PATH).
+                           Example: "~/.calendars:~/.calendars-external"
+        """
+        # Support multiple paths separated by colons
+        self.calendars_paths = [
+            Path(p.strip()).expanduser()
+            for p in calendars_path.split(":")
+            if p.strip()
+        ]
+        # Keep first path as primary for backwards compatibility
+        self.calendars_path = self.calendars_paths[0] if self.calendars_paths else Path("~/.calendars").expanduser()
 
     def _parse_datetime(self, dt) -> tuple[str, bool]:
         """Parse icalendar datetime to ISO8601 string and all_day flag"""
@@ -134,24 +148,25 @@ class CalendarManager:
 
         all_events = []
 
-        # Walk through calendar directories
-        if not self.calendars_path.exists():
-            return []
-
-        for cal_dir in self.calendars_path.iterdir():
-            if not cal_dir.is_dir():
+        # Walk through all calendar paths
+        for calendars_path in self.calendars_paths:
+            if not calendars_path.exists():
                 continue
 
-            cal_name = cal_dir.name
+            for cal_dir in calendars_path.iterdir():
+                if not cal_dir.is_dir():
+                    continue
 
-            # Filter by calendar if specified
-            if calendar and cal_name != calendar:
-                continue
+                cal_name = cal_dir.name
 
-            # Find .ics files (may be nested in subdirectories)
-            for ics_file in cal_dir.rglob("*.ics"):
-                events = self._parse_ics_file(ics_file, cal_name)
-                all_events.extend(events)
+                # Filter by calendar if specified
+                if calendar and cal_name != calendar:
+                    continue
+
+                # Find .ics files (may be nested in subdirectories)
+                for ics_file in cal_dir.rglob("*.ics"):
+                    events = self._parse_ics_file(ics_file, cal_name)
+                    all_events.extend(events)
 
         # Filter by date range
         filtered = []
@@ -191,34 +206,36 @@ class CalendarManager:
         query_lower = query.lower()
         matches = []
 
-        if not self.calendars_path.exists():
-            return []
-
-        for cal_dir in self.calendars_path.iterdir():
-            if not cal_dir.is_dir():
+        # Search through all calendar paths
+        for calendars_path in self.calendars_paths:
+            if not calendars_path.exists():
                 continue
 
-            cal_name = cal_dir.name
+            for cal_dir in calendars_path.iterdir():
+                if not cal_dir.is_dir():
+                    continue
 
-            if calendar and cal_name != calendar:
-                continue
+                cal_name = cal_dir.name
 
-            for ics_file in cal_dir.rglob("*.ics"):
-                events = self._parse_ics_file(ics_file, cal_name)
+                if calendar and cal_name != calendar:
+                    continue
 
-                for event in events:
-                    # Search in summary, description, location
-                    searchable = " ".join(filter(None, [
-                        event.summary,
-                        event.description,
-                        event.location
-                    ])).lower()
+                for ics_file in cal_dir.rglob("*.ics"):
+                    events = self._parse_ics_file(ics_file, cal_name)
 
-                    if query_lower in searchable:
-                        matches.append(event)
+                    for event in events:
+                        # Search in summary, description, location
+                        searchable = " ".join(filter(None, [
+                            event.summary,
+                            event.description,
+                            event.location
+                        ])).lower()
 
-                        if len(matches) >= limit:
-                            return matches
+                        if query_lower in searchable:
+                            matches.append(event)
+
+                            if len(matches) >= limit:
+                                return matches
 
         return matches
 
@@ -241,16 +258,24 @@ class CalendarManager:
         Returns:
             Created CalendarEvent
         """
-        # Find calendar directory
-        cal_dir = self.calendars_path / calendar
-        if not cal_dir.exists():
+        # Find calendar directory (search all paths)
+        cal_dir = None
+        for calendars_path in self.calendars_paths:
+            candidate = calendars_path / calendar
+            if candidate.exists():
+                cal_dir = candidate
+                break
             # Try to find matching subdirectory
-            for subdir in self.calendars_path.iterdir():
-                if subdir.is_dir() and calendar.lower() in subdir.name.lower():
-                    cal_dir = subdir
-                    break
-            else:
-                raise ValueError(f"Calendar not found: {calendar}")
+            if calendars_path.exists():
+                for subdir in calendars_path.iterdir():
+                    if subdir.is_dir() and calendar.lower() in subdir.name.lower():
+                        cal_dir = subdir
+                        break
+            if cal_dir:
+                break
+
+        if not cal_dir:
+            raise ValueError(f"Calendar not found: {calendar}")
 
         # Generate UID
         uid = str(uuid.uuid4())
