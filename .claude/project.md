@@ -1,42 +1,5 @@
 # axios-dav Project Context
 
-## OpenSpec SDD Workflow
-
-**IMPORTANT**: This project follows a **Spec-Driven Development (SDD)** workflow using **OpenSpec**. All work must be planned as a delta before implementation.
-
-### Source of Truth Documentation
-
-**Primary Reference**: The `openspec/` directory contains the authoritative state of the project:
-
-- **[project.md](../openspec/project.md)** - Project goals, tech stack, and the Constitution (rules).
-- **[AGENTS.md](../openspec/AGENTS.md)** - Specific instructions for AI agents.
-- **[specs/](../openspec/specs/)** - Modular specifications for all system features.
-- **[glossary.md](../openspec/glossary.md)** - Domain terminology and NixOS concepts.
-- **[discovery/](../openspec/discovery/)** - Historical discovery reports and tracked unknowns.
-
-### Workflow for Changes (The Delta Process)
-
-**1. Discovery & Planning:**
-- Read `openspec/specs/` to understand the current state.
-- Create a new directory in `openspec/changes/[change-name]/`.
-- Stage updated spec files and a `tasks.md` implementation plan.
-
-**2. Implementation:**
-- Execute the tasks defined in `tasks.md`.
-- Ensure all code complies with the Constitution in `openspec/project.md`.
-
-**3. Finalization:**
-- Merge the delta specs into the main `openspec/specs/` directory.
-- Move the change directory to `openspec/changes/archive/`.
-
-### Quick Reference for AI Assistants
-
-When asked to work on axios-dav:
-- **Core Rules & Goals** → `openspec/project.md`
-- **Your Workflow** → `openspec/AGENTS.md`
-- **Feature Specs** → `openspec/specs/[feature]/spec.md`
-- **Terminology** → `openspec/glossary.md`
-
 ## Overview
 
 axios-dav is a **declarative NixOS/home-manager module** for CalDAV and CardDAV synchronization. It provides:
@@ -96,16 +59,7 @@ services.axios-dav = {
 };
 ```
 
-## Common Operations
-
-### Adding a New Feature
-
-1. Create proposal in `openspec/changes/[feature-name]/`
-2. Write `proposal.md` and `tasks.md`
-3. Implement according to tasks
-4. Update specs and archive proposal
-
-### Testing Locally
+## Testing Locally
 
 ```bash
 # Build and test
@@ -116,13 +70,6 @@ nix run .#vm-test
 ```
 
 ## Notes for AI Assistants
-
-### CRITICAL: OpenSpec Consultation REQUIRED
-
-**BEFORE taking ANY action in this repository, you MUST:**
-1. **STOP** - Do not proceed without consulting `openspec/`.
-2. **READ** `openspec/project.md` and `openspec/AGENTS.md`.
-3. **PLAN** your change as a delta in `openspec/changes/`.
 
 ### Git Workflow
 
