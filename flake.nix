@@ -33,13 +33,13 @@
       # NixOS module
       nixosModules = {
         default = self.nixosModules.axios-dav;
-        axios-dav = ./modules;
+        axios-dav = import ./modules;
       };
 
       # home-manager module
       homeModules = {
         default = self.homeModules.axios-dav;
-        axios-dav = ./home;
+        axios-dav = import ./home;
       };
 
       # Overlay for custom packages
