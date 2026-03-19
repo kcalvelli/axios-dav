@@ -26,7 +26,8 @@ The MCP server MUST provide a `create_contact` tool that creates a new contact i
 **Then** a new VCF file is created at `~/.contacts/Personal/{uid}.vcf`
 **And** the VCF contains valid vCard 3.0 format
 **And** the response includes the created contact with its UID
-**And** the response includes a note about running `vdirsyncer sync`
+**And** the server runs `vdirsyncer sync` automatically
+**And** the response includes `_sync` with the sync result
 
 #### Scenario: Create contact with full details
 
@@ -77,6 +78,8 @@ The MCP server MUST provide an `update_contact` tool that modifies an existing c
 **And** all other fields remain unchanged
 **And** the response includes the updated contact
 **And** the response includes the backup path
+**And** the server runs `vdirsyncer sync` automatically
+**And** the response includes `_sync` with the sync result
 
 #### Scenario: Update contact by name
 
@@ -119,7 +122,8 @@ The MCP server MUST provide a `delete_contact` tool that removes a contact.
 **And** the original VCF file is deleted
 **And** the response confirms deletion with the contact's name
 **And** the response includes the backup path
-**And** the response includes a note about running `vdirsyncer sync`
+**And** the server runs `vdirsyncer sync` automatically
+**And** the response includes `_sync` with the sync result
 
 #### Scenario: Delete contact by name
 
@@ -207,12 +211,18 @@ All tools return structured errors matching existing patterns:
 {"error": "Addressbook not found: NonExistent"}
 ```
 
-### Sync Note
+### Auto-Sync
 
-Create, update, and delete operations include in response:
+Create, update, and delete operations automatically run `vdirsyncer sync` after the local write. The response includes a `_sync` field:
 ```json
-{"_note": "Contact modified locally. Run 'vdirsyncer sync' to sync to remote."}
+{"_sync": {"success": true}}
 ```
+Or on failure:
+```json
+{"_sync": {"success": false, "error": "error details"}}
+```
+
+See the `mcp-auto-sync` spec for full sync behavior, failure handling, and timeout details.
 
 ### Backup Strategy
 
@@ -220,7 +230,7 @@ Update and delete operations include backup path in response:
 ```json
 {
   "_backup": "~/.contacts/Personal/abc-123.vcf.bak",
-  "_note": "Backup created. Run 'vdirsyncer sync' to sync changes to remote."
+  "_sync": {"success": true}
 }
 ```
 
