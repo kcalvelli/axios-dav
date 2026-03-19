@@ -47,25 +47,49 @@ def _get_contacts() -> ContactsManager:
     return _contacts
 
 
+def _find_vdirsyncer() -> str:
+    """Find the vdirsyncer binary, checking common Nix paths."""
+    import shutil
+    path = shutil.which("vdirsyncer")
+    if path:
+        return path
+    # Check common Nix profile paths that may not be in MCP server's PATH
+    for candidate in [
+        os.path.expanduser("~/.nix-profile/bin/vdirsyncer"),
+        "/run/current-system/sw/bin/vdirsyncer",
+        os.path.expanduser("~/.local/state/nix/profiles/home-manager/home-path/bin/vdirsyncer"),
+    ]:
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return "vdirsyncer"  # fallback, will raise FileNotFoundError if missing
+
+
 def _run_sync() -> dict:
     """Run vdirsyncer sync and return the result."""
     try:
+        vdirsyncer = _find_vdirsyncer()
+        sys.stderr.write(f"[INFO] Running sync: {vdirsyncer}\n")
         result = subprocess.run(
-            ["vdirsyncer", "sync"],
+            [vdirsyncer, "sync"],
             capture_output=True,
             text=True,
             timeout=30,
         )
         if result.returncode == 0:
+            sys.stderr.write("[INFO] Sync completed successfully\n")
             return {"success": True}
         else:
             error = result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+            sys.stderr.write(f"[WARN] Sync failed: {error}\n")
             return {"success": False, "error": error}
     except FileNotFoundError:
-        return {"success": False, "error": "vdirsyncer not found on PATH"}
+        sys.stderr.write("[WARN] vdirsyncer not found on PATH or common Nix paths\n")
+        return {"success": False, "error": "vdirsyncer not found"}
     except subprocess.TimeoutExpired:
+        sys.stderr.write("[WARN] Sync timed out after 30s\n")
         return {"success": False, "error": "sync timed out after 30s"}
     except Exception as e:
+        sys.stderr.write(f"[WARN] Sync error: {e}\n")
         return {"success": False, "error": str(e)}
 
 
