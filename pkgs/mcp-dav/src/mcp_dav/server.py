@@ -12,6 +12,7 @@ Uses FastMCP for protocol handling. Provides tools for AI agents to:
 
 import json
 import os
+import subprocess
 import sys
 from typing import Optional
 
@@ -44,6 +45,28 @@ def _get_contacts() -> ContactsManager:
         contacts_path = os.environ.get("MCP_DAV_CONTACTS", "~/.contacts")
         _contacts = ContactsManager(contacts_path)
     return _contacts
+
+
+def _run_sync() -> dict:
+    """Run vdirsyncer sync and return the result."""
+    try:
+        result = subprocess.run(
+            ["vdirsyncer", "sync"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            return {"success": True}
+        else:
+            error = result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+            return {"success": False, "error": error}
+    except FileNotFoundError:
+        return {"success": False, "error": "vdirsyncer not found on PATH"}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "sync timed out after 30s"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # =============================================================================
@@ -91,7 +114,7 @@ def create_event(
     description: Optional[str] = None,
     all_day: bool = False,
 ) -> str:
-    """Create a new calendar event. After creation, run 'vdirsyncer sync' to sync to remote."""
+    """Create a new calendar event. Automatically syncs to remote after creation."""
     event = _get_calendar().create_event(
         summary=summary,
         start=start,
@@ -102,7 +125,7 @@ def create_event(
         all_day=all_day,
     )
     result = event.to_dict()
-    result["_note"] = "Event created locally. Run 'vdirsyncer sync' to sync to remote calendar."
+    result["_sync"] = _run_sync()
     return json.dumps(result, indent=2, default=str)
 
 
@@ -179,7 +202,7 @@ def create_contact(
     title: Optional[str] = None,
     notes: Optional[str] = None,
 ) -> str:
-    """Create a new contact. After creation, run 'vdirsyncer sync' to sync to remote."""
+    """Create a new contact. Automatically syncs to remote after creation."""
     try:
         contact = _get_contacts().create_contact(
             formatted_name=formatted_name,
@@ -193,7 +216,7 @@ def create_contact(
             notes=notes,
         )
         result = contact.to_dict()
-        result["_note"] = "Contact created locally. Run 'vdirsyncer sync' to sync to remote."
+        result["_sync"] = _run_sync()
         return json.dumps(result, indent=2, default=str)
     except ValueError as e:
         return json.dumps({"error": str(e)}, indent=2)
@@ -226,7 +249,7 @@ def update_contact(
             title=title,
             notes=notes,
         )
-        result["_note"] = "Contact updated locally. Run 'vdirsyncer sync' to sync to remote."
+        result["_sync"] = _run_sync()
         return json.dumps(result, indent=2, default=str)
     except ValueError as e:
         return json.dumps({"error": str(e)}, indent=2)
@@ -240,7 +263,7 @@ def delete_contact(
     """Delete a contact. Creates a backup before deletion."""
     try:
         result = _get_contacts().delete_contact(uid=uid, name=name)
-        result["_note"] = "Contact deleted locally. Run 'vdirsyncer sync' to sync to remote."
+        result["_sync"] = _run_sync()
         return json.dumps(result, indent=2, default=str)
     except ValueError as e:
         return json.dumps({"error": str(e)}, indent=2)
