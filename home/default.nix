@@ -98,7 +98,7 @@ let
         type = "google_calendar"
         token_file = "${account.tokenFile}"
         client_id = "${account.clientId}"
-        client_secret.fetch = ["command", "cat", "${toString account.clientSecretFile}"]
+        client_secret.fetch = ["command", "${pkgs.coreutils}/bin/cat", "${toString account.clientSecretFile}"]
       ''
     else if account.type == "caldav" then
       ''
@@ -106,7 +106,7 @@ let
         type = "caldav"
         url = "${account.url}"
         username = "${account.username}"
-        password.fetch = ["command", "cat", "${toString account.passwordFile}"]
+        password.fetch = ["command", "${pkgs.coreutils}/bin/cat", "${toString account.passwordFile}"]
       ''
     else if account.type == "http" then
       ''
@@ -148,7 +148,7 @@ let
         type = "google_contacts"
         token_file = "${account.tokenFile}"
         client_id = "${account.clientId}"
-        client_secret.fetch = ["command", "cat", "${toString account.clientSecretFile}"]
+        client_secret.fetch = ["command", "${pkgs.coreutils}/bin/cat", "${toString account.clientSecretFile}"]
       ''
     else if account.type == "carddav" then
       ''
@@ -156,7 +156,7 @@ let
         type = "carddav"
         url = "${account.url}"
         username = "${account.username}"
-        password.fetch = ["command", "cat", "${toString account.passwordFile}"]
+        password.fetch = ["command", "${pkgs.coreutils}/bin/cat", "${toString account.passwordFile}"]
       ''
     else
       throw "Unknown contacts type: ${account.type}";
