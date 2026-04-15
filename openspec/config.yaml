@@ -1,5 +1,5 @@
 context: |
-  # axios-dav Project
+  # cairn-dav Project
 
   ## Vision
 
@@ -10,8 +10,8 @@ context: |
   1. **Declarative Configuration** - No manual config files; everything in Nix
   2. **Google Integration** - First-class support for Google Calendar and Contacts
   3. **AI-Powered Management** - MCP server for Claude Code / AI agents to manage calendar and contacts
-  4. **Standalone Use** - Usable by any NixOS user, not just axios users
-  5. **axios Integration** - Seamless integration as a flake input for axios
+  4. **Standalone Use** - Usable by any NixOS user, not just cairn users
+  5. **cairn Integration** - Seamless integration as a flake input for cairn
 
   ## Tech Stack
 
@@ -51,7 +51,7 @@ context: |
   ┌─────────────────────────────────────────────────────────────────┐
   │                     User's NixOS Configuration                   │
   │                                                                  │
-  │  services.axios-dav = {                                         │
+  │  services.cairn-dav = {                                         │
   │    calendar.enable = true;                                      │
   │    calendar.accounts.personal = { ... };                        │
   │    contacts.enable = true;                                      │
@@ -60,7 +60,7 @@ context: |
                                 │
                                 ▼
   ┌─────────────────────────────────────────────────────────────────┐
-  │                     axios-dav NixOS Module                       │
+  │                     cairn-dav NixOS Module                       │
   │                                                                  │
   │  • Generates ~/.config/vdirsyncer/config                        │
   │  • Generates ~/.config/khal/config                              │
@@ -88,22 +88,22 @@ context: |
   ### As Standalone Project
   ```nix
   {
-    inputs.axios-dav.url = "github:kcalvelli/axios-dav";
+    inputs.cairn-dav.url = "github:kcalvelli/cairn-dav";
 
     # In configuration.nix or home.nix
-    imports = [ inputs.axios-dav.nixosModules.default ];
+    imports = [ inputs.cairn-dav.nixosModules.default ];
 
-    services.axios-dav.calendar.enable = true;
+    services.cairn-dav.calendar.enable = true;
   }
   ```
 
-  ### As Part of axios
+  ### As Part of cairn
   ```nix
-  # In axios flake.nix
-  inputs.axios-dav.url = "github:kcalvelli/axios-dav";
+  # In cairn flake.nix
+  inputs.cairn-dav.url = "github:kcalvelli/cairn-dav";
 
-  # axios wires up the integration, users just enable PIM features
-  modules.pim = true;  # Enables axios-ai-mail + axios-dav
+  # cairn wires up the integration, users just enable PIM features
+  modules.pim = true;  # Enables cairn-mail + cairn-dav
   ```
 
   ## Success Criteria
@@ -112,5 +112,5 @@ context: |
   2. User can create calendar events via `khal new` and have them sync to Google
   3. AI agents can read/create/modify calendar events via MCP
   4. AI agents can search/read contacts via MCP
-  5. Works standalone without axios
-  6. Integrates cleanly into axios as a flake input
+  5. Works standalone without cairn
+  6. Integrates cleanly into cairn as a flake input

@@ -17,7 +17,7 @@
 
 ## Phase 2: vdirsyncer Config Generation
 
-- [x] Define `services.pim.calendar.accounts` option type (renamed from axios-dav)
+- [x] Define `services.pim.calendar.accounts` option type (renamed from cairn-dav)
 - [x] Implement vdirsyncer config generation:
   - [x] `[general]` section with status_path
   - [x] `[storage]` sections for each account
@@ -78,7 +78,7 @@
 
 - [x] Write comprehensive README.md:
   - [x] Project overview
-  - [x] Installation (standalone + axios)
+  - [x] Installation (standalone + cairn)
   - [x] Configuration examples
   - [x] Google OAuth setup guide (detailed with gotchas)
   - [x] CLI usage (khal, khard, vdirsyncer)
@@ -94,12 +94,12 @@
   - [x] Formatting check
 - [x] Create initial git tag/release
 
-## axios Integration
+## cairn Integration
 
-- [x] Remove old `home/calendar` module from axios
-- [x] Remove vdirsyncer from `modules/pim` (axios-dav handles it)
+- [x] Remove old `home/calendar` module from cairn
+- [x] Remove vdirsyncer from `modules/pim` (cairn-dav handles it)
 - [x] Remove calendar import from desktop sharedModules
-- [x] Add documentation pointers to axios-dav
+- [x] Add documentation pointers to cairn-dav
 
 ## Verification Checklist
 
@@ -113,5 +113,5 @@ Before marking complete:
 - [x] MCP server starts without errors
 - [x] MCP `list_events` returns synced events
 - [x] MCP `create_event` creates event that syncs (local file created, sync requires vdirsyncer)
-- [x] Works without axios (standalone) - `nix flake check` passes
+- [x] Works without cairn (standalone) - `nix flake check` passes
 - [x] README has complete setup instructions

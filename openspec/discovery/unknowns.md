@@ -36,8 +36,8 @@
 
 ## Integration Unknowns
 
-### axios Integration Pattern
-- **Question**: How exactly will axios import and configure axios-dav?
-- **Evidence**: Follow axios-ai-mail pattern
+### cairn Integration Pattern
+- **Question**: How exactly will cairn import and configure cairn-dav?
+- **Evidence**: Follow cairn-mail pattern
 - **Impact**: Need to align module interface
-- **Status**: Design with axios compatibility in mind
+- **Status**: Design with cairn compatibility in mind

@@ -1,4 +1,4 @@
-# axios-dav
+# cairn-dav
 
 Declarative CalDAV/CardDAV synchronization for NixOS with MCP integration.
 
@@ -9,7 +9,7 @@ Declarative CalDAV/CardDAV synchronization for NixOS with MCP integration.
 - **CalDAV/CardDAV** - Works with any standard provider (Fastmail, Nextcloud, etc.)
 - **HTTP/ICS Subscriptions** - Read-only calendar feeds (holidays, sports, etc.)
 - **MCP Server** - AI agents can read/create calendar events and search contacts
-- **Standalone or Integrated** - Use independently or as part of [axios](https://github.com/kcalvelli/axios)
+- **Standalone or Integrated** - Use independently or as part of [cairn](https://github.com/kcalvelli/cairn)
 
 ## Quick Start
 
@@ -21,15 +21,15 @@ Declarative CalDAV/CardDAV synchronization for NixOS with MCP integration.
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     home-manager.url = "github:nix-community/home-manager";
-    axios-dav.url = "github:kcalvelli/axios-dav";
+    cairn-dav.url = "github:kcalvelli/cairn-dav";
   };
 
-  outputs = { self, nixpkgs, home-manager, axios-dav, ... }: {
+  outputs = { self, nixpkgs, home-manager, cairn-dav, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
-        axios-dav.nixosModules.default
+        cairn-dav.nixosModules.default
         home-manager.nixosModules.home-manager
         ./configuration.nix
       ];
@@ -44,8 +44,8 @@ Declarative CalDAV/CardDAV synchronization for NixOS with MCP integration.
 # configuration.nix
 { inputs, ... }:
 {
-  # Import axios-dav NixOS module (provides services.pim.* options)
-  imports = [ inputs.axios-dav.nixosModules.default ];
+  # Import cairn-dav NixOS module (provides services.pim.* options)
+  imports = [ inputs.cairn-dav.nixosModules.default ];
 
   services.pim.calendar = {
     enable = true;
@@ -74,7 +74,7 @@ Declarative CalDAV/CardDAV synchronization for NixOS with MCP integration.
 # In your home-manager config
 { inputs, ... }:
 {
-  imports = [ inputs.axios-dav.homeModules.default ];
+  imports = [ inputs.cairn-dav.homeModules.default ];
 
   # The home module reads services.pim.* from NixOS config
   # and generates vdirsyncer, khal, and khard configurations
@@ -326,7 +326,7 @@ vdirsyncer -v DEBUG sync
 
 ## Systemd Services
 
-axios-dav creates user-level systemd services for automatic sync:
+cairn-dav creates user-level systemd services for automatic sync:
 
 ```bash
 # Check sync timer status
@@ -366,7 +366,7 @@ Check your current config for:
 - Local calendar/contacts paths
 - Calendar names
 
-### 3. Configure axios-dav with matching paths
+### 3. Configure cairn-dav with matching paths
 
 Use `localPath` option to match your existing paths:
 
@@ -419,7 +419,7 @@ vdirsyncer sync
 
 **Cause**: Google Contacts creates a "default" subdirectory that older configs might not expect
 
-**Fix**: Ensure you're using the latest axios-dav which handles this automatically
+**Fix**: Ensure you're using the latest cairn-dav which handles this automatically
 
 ### Sync timer not running
 
@@ -656,8 +656,8 @@ mcp-cli call mcp-dav get_free_busy '{"start_date": "2025-01-24", "end_date": "20
 
 ## Related Projects
 
-- [axios](https://github.com/kcalvelli/axios) - Modular NixOS distribution
-- [axios-ai-mail](https://github.com/kcalvelli/axios-ai-mail) - AI-powered email for NixOS
+- [cairn](https://github.com/kcalvelli/cairn) - Modular NixOS distribution
+- [cairn-mail](https://github.com/kcalvelli/cairn-mail) - AI-powered email for NixOS
 - [vdirsyncer](https://vdirsyncer.pimutils.org/) - Underlying sync engine
 - [khal](https://khal.readthedocs.io/) - CLI calendar application
 - [khard](https://khard.readthedocs.io/) - CLI contacts application

@@ -2,17 +2,17 @@
 
 ## Summary
 
-Initialize axios-dav as a functional NixOS flake with declarative vdirsyncer configuration for Google Calendar and Contacts, plus an MCP server for AI access.
+Initialize cairn-dav as a functional NixOS flake with declarative vdirsyncer configuration for Google Calendar and Contacts, plus an MCP server for AI access.
 
 ## Background
 
-This project was extracted from axios to provide standalone CalDAV/CardDAV synchronization capabilities. The axios project previously had:
+This project was extracted from cairn to provide standalone CalDAV/CardDAV synchronization capabilities. The cairn project previously had:
 
 - `home/calendar/default.nix` - systemd timers for vdirsyncer sync
 - Manual `~/.vdirsyncer/config` and `~/.config/khal/config` files (not Nix-managed)
 - DMS integration via khal
 
-axios-dav will make this declarative and add MCP capabilities.
+cairn-dav will make this declarative and add MCP capabilities.
 
 ## Goals
 
@@ -27,8 +27,8 @@ axios-dav will make this declarative and add MCP capabilities.
 ## Proposed Module Interface
 
 ```nix
-services.axios-dav = {
-  enable = lib.mkEnableOption "axios-dav calendar and contacts sync";
+services.cairn-dav = {
+  enable = lib.mkEnableOption "cairn-dav calendar and contacts sync";
 
   # Calendar configuration
   calendar = {
@@ -155,7 +155,7 @@ services.axios-dav = {
 
 ```nix
 {
-  services.axios-dav = {
+  services.cairn-dav = {
     enable = true;
 
     calendar = {
@@ -251,7 +251,7 @@ services.axios-dav = {
 2. vdirsyncer config is generated correctly
 3. `khal list` shows synced events
 4. MCP server responds to tool calls
-5. Works as standalone flake (no axios dependency)
+5. Works as standalone flake (no cairn dependency)
 
 ## Dependencies
 
@@ -267,4 +267,4 @@ services.axios-dav = {
 - [khal documentation](https://khal.readthedocs.io/)
 - [khard documentation](https://khard.readthedocs.io/)
 - [MCP specification](https://modelcontextprotocol.io/)
-- [axios-ai-mail](https://github.com/kcalvelli/axios-ai-mail) - sibling project pattern
+- [cairn-mail](https://github.com/kcalvelli/cairn-mail) - sibling project pattern

@@ -1,21 +1,21 @@
-# axios-dav Project Context
+# cairn-dav Project Context
 
 ## Overview
 
-axios-dav is a **declarative NixOS/home-manager module** for CalDAV and CardDAV synchronization. It provides:
+cairn-dav is a **declarative NixOS/home-manager module** for CalDAV and CardDAV synchronization. It provides:
 
 - **Declarative vdirsyncer configuration** - Nix-managed sync config (no manual `~/.vdirsyncer/config`)
 - **Calendar integration** - khal CLI/TUI with MCP server for AI access
 - **Contacts integration** - khard CLI with MCP server for AI access
 - **Google OAuth management** - Secure credential handling via agenix
-- **Standalone or integrated** - Use independently or as part of axios
+- **Standalone or integrated** - Use independently or as part of cairn
 
-**Key Philosophy**: This is a library/module, not a personal configuration. Can be used by any NixOS user, not just axios users.
+**Key Philosophy**: This is a library/module, not a personal configuration. Can be used by any NixOS user, not just cairn users.
 
 ## Project Structure
 
 ```
-axios-dav/
+cairn-dav/
 ├── flake.nix              # Main flake with inputs and outputs
 ├── flake.lock             # Locked dependency versions
 ├── modules/               # NixOS modules
@@ -53,7 +53,7 @@ The `mcp-dav` server exposes calendar and contacts tools:
 
 Users enable only what they need:
 ```nix
-services.axios-dav = {
+services.cairn-dav = {
   calendar.enable = true;   # Just calendar
   contacts.enable = false;  # No contacts
 };

@@ -1,4 +1,4 @@
-# axios-dav NixOS module
+# cairn-dav NixOS module
 # Provides declarative CalDAV/CardDAV synchronization under services.pim
 {
   config,

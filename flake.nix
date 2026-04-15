@@ -32,14 +32,14 @@
     {
       # NixOS module
       nixosModules = {
-        default = self.nixosModules.axios-dav;
-        axios-dav = import ./modules;
+        default = self.nixosModules.cairn-dav;
+        cairn-dav = import ./modules;
       };
 
       # home-manager module
       homeModules = {
-        default = self.homeModules.axios-dav;
-        axios-dav = import ./home;
+        default = self.homeModules.cairn-dav;
+        cairn-dav = import ./home;
       };
 
       # Overlay for custom packages
@@ -78,7 +78,7 @@
 
             meta = {
               description = "MCP server for calendar and contacts access";
-              homepage = "https://github.com/kcalvelli/axios-dav";
+              homepage = "https://github.com/kcalvelli/cairn-dav";
               license = pkgs.lib.licenses.mit;
               mainProgram = "mcp-dav";
             };
@@ -112,7 +112,7 @@
             ];
 
             shellHook = ''
-              echo "axios-dav development shell"
+              echo "cairn-dav development shell"
               echo "Tools available: nil, nixfmt, python3, vdirsyncer, khal, khard"
             '';
           };

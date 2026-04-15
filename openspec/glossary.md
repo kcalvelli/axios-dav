@@ -1,4 +1,4 @@
-# axios-dav Glossary
+# cairn-dav Glossary
 
 ## Core Concepts
 
@@ -18,7 +18,7 @@ A CLI calendar application that reads from local `.ics` files (typically synced 
 A CLI contacts/address book application that reads from local `.vcf` files (typically synced by vdirsyncer).
 
 ### MCP (Model Context Protocol)
-A protocol for AI assistants to access external tools and data sources. axios-dav provides an MCP server for calendar and contacts access.
+A protocol for AI assistants to access external tools and data sources. cairn-dav provides an MCP server for calendar and contacts access.
 
 ## Configuration Terms
 
@@ -81,14 +81,14 @@ Google's CardDAV-compatible interface. Used by vdirsyncer's `google_contacts` st
 
 ## Project Terms
 
-### axios-dav
+### cairn-dav
 This project. Declarative NixOS module for CalDAV/CardDAV sync with MCP integration.
 
-### axios
-The parent project. A modular NixOS distribution that can import axios-dav as a flake input.
+### cairn
+The parent project. A modular NixOS distribution that can import cairn-dav as a flake input.
 
-### axios-ai-mail
-Sibling project. AI-powered email management for NixOS. axios-dav follows similar patterns.
+### cairn-mail
+Sibling project. AI-powered email management for NixOS. cairn-dav follows similar patterns.
 
 ### mcp-dav
-The MCP server component of axios-dav. Provides AI access to calendar and contacts.
+The MCP server component of cairn-dav. Provides AI access to calendar and contacts.
