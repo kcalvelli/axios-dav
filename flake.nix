@@ -52,7 +52,19 @@
       packages = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              # fastmcp tests hang indefinitely in nix sandbox (async/network deadlock)
+              (_final: prev: {
+                pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+                  (_pyFinal: pyPrev: {
+                    fastmcp = pyPrev.fastmcp.overrideAttrs { doInstallCheck = false; };
+                  })
+                ];
+              })
+            ];
+          };
         in
         {
           # MCP server for calendar and contacts access
